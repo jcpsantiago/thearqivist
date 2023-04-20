@@ -1,14 +1,15 @@
+## ---------------------------------------------------------
+## Git Ignore Patterns
+
+# Include Tool specific patterns in global ignore
+# https://github.com/practicalli/dotfiles/blob/main/git/ignore
+
+# Clojure project ignore files
 pom.xml
 pom.xml.asc
-*.jar
-*.class
-/lib/
-/classes/
-/target/
-/checkouts/
-.lein-deps-sum
-.lein-repl-history
-.lein-plugins/
-.lein-failures
 .nrepl-port
-.cpcache/
+.nrepl-history
+.socket-repl-port
+/target/
+
+## ---------------------------------------------------------
