@@ -1,2 +1,4 @@
 # The Arqivist
-_Important discussion should not be forgotten_
+_Important discussions should not be forgotten_
+
+The Arqivist is a Slack bot tasked with backing up your channels and conversations.
