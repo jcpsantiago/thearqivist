@@ -11,6 +11,12 @@
 
 The Arqivist is a Slack bot which you can summon to create a Confluence page with the contents of a message thread, or a channel.
 
+## Requirements
+To run The Arqivist yourself you need
+* admin access to a Confluence account
+* admin access to a Slack workspace
+* a running instance of The Arqivist + a Postgres database
+
 ## Installing in Slack
 WIP
 
