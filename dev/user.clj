@@ -78,7 +78,7 @@
 ;; Mulog events and publishing
 
 ;; set event global context - information added to every event for REPL workflow
-(mulog/set-global-context! {:app-name "Practicalli Service",
+(mulog/set-global-context! {:app-name "The Arqivist",
                             :version "0.1.0", :env "dev"})
 
 (def mulog-tap-publisher
