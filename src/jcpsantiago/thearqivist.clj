@@ -11,29 +11,48 @@
     [com.brunobonacci.mulog :as mulog]))
 
 
+;; ---------------------------------------------------------
+;; Start Mulog publisher - only once
+(defonce mulog-publisher
+  (mulog/start-publisher! {:type :console :pretty? true}))
+;; ---------------------------------------------------------
+
+
+;; ---------------------------------------------------------
+;; Application
+
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn greet
   "Greeting message via Clojure CLI clojure.exec"
-
-  ;; TODO: fix greet function with hash-map argument {:team-name "secret engineering"}
-  ([] (greet "secret engineering"))
+  ([] (greet {:team-name "secret engineering"}))
   ([{:keys [team-name]}]
-   (str "jcpsantiago thearqivist service developed by the " team-name " team")))
+   (str "thearqivist application developed by the " team-name " team")))
 
 
 (defn -main
   "Entry point into the application via clojure.main -M"
   [& args]
-  (mulog/log ::application-starup :arguments args)
-  (greet {:team-name (first args)}))
+  (let [team (first args)]
+    (mulog/set-global-context!
+     {:app-name "jcpsantiago-thearqivist" :version  "{{version}}"})
+    (mulog/log ::application-starup :arguments args)
+    (if team
+      (greet team)
+      (greet))))
+
+;; ---------------------------------------------------------
 
 
-
-;; Rich comment block with redefined vars ignored
+;; ---------------------------------------------------------
+;; Rick Comment
 #_{:clj-kondo/ignore [:redefined-var]}
 (comment
 
   (-main)
-  (-main "Jenny")
+  (-main {:team-name "Clojure Engineering"})
 
-  #_()) ;; End of rich comment block
+  ;; Stop mulog publisher
+  (mulog-publisher)
+
+  #_()) ; End of rich comment block
+;; ---------------------------------------------------------
