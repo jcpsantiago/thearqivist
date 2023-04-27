@@ -1,11 +1,10 @@
 ;; ---------------------------------------------------------
 ;; jcpsantiago.thearqivist
-;;
-;; TODO: Provide a meaningful description of the project
 ;; ---------------------------------------------------------
 
 
 (ns jcpsantiago.thearqivist
+  "the start of something great"
   (:gen-class)
   (:require
     [com.brunobonacci.mulog :as mulog]))
