@@ -12,7 +12,7 @@
   com.brunobonacci/mulog-adv-console {:mvn/version "0.9.0"}
   ;; Optional: suppress slf4j warning
   ;; org.slf4j/slf4j-nop {:mvn/version "1.7.32"}
-}
+  }
 
  :aliases
  {;; Clojure.main execution of application
