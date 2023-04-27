@@ -11,6 +11,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+- ci: update MegaLinter and Quality check actions to latest versions
+
 ### Changed
 - updates from Practicalli project templates
 
