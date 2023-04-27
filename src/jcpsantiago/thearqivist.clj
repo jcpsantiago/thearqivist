@@ -7,7 +7,7 @@
   "the start of something great"
   (:gen-class)
   (:require
-    [com.brunobonacci.mulog :as mulog]))
+   [com.brunobonacci.mulog :as mulog]))
 
 
 ;; ---------------------------------------------------------
