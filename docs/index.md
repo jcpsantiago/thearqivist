@@ -12,6 +12,8 @@ The Arqivist is an app integrating Confluence and Slack,
 letting you create pages from Slack messages,
 It can also backup messages and files to Google Drive (more soon), either once or continuously on a schedule.
 
+You can try The Arqivist for free at the [Atlassian marketplace](https://marketplace.atlassian.com/apps/1227973), or look at the source code at [jcpsantiago/thearqivist](https://github.com/jcpsantiago/thearqivist).
+
 ## Use-cases
 
 * **Creating ad-hoc documentation** — No docs? No problem! Ask in Slack and then create a Confluence page with the answer!
