@@ -9,11 +9,11 @@
    [org.httpkit.server :as http]))
 
 (def migrations
+  "Database migration component using migratus"
   #::ds{:start (fn [{{:keys [creds]} ::ds/config}]
                  (mulog/log ::migrating-db :local-time (java.time.LocalDateTime/now))
                  ;; TODO: wrap in a try?
                  ;; should we allow the app to boot if there is no database available?
-                 (println "foo")
                  (migratus/migrate creds)
                  ;; TODO: why are we returning true here? Do we have to return something at all?
                  true)
@@ -22,6 +22,8 @@
                          :db {:datasource (ds/ref [:db :db-connection])}}}})
 
 (def db-connection
+  "Database connection component.
+   Uses Hikari to create and manage a connection pool."
   #::ds{:start (fn [{{:keys [datasource-options]} ::ds/config}]
                  (mulog/log ::creating-db-datasource :local-time (java.time.LocalDateTime/now))
                  (hikari/make-datasource datasource-options))
@@ -39,6 +41,7 @@
                                       :jdbc-url (ds/ref [:env :jdbc-url])}}})
 
 (def http-server
+  "Webserver component using http-kit"
   #::ds{:start (fn [{{:keys [system options]} ::ds/config}]
                  (let [handler (str system)]
                    (mulog/log ::starting-server
@@ -60,6 +63,9 @@
                            :join? false}}})
 
 (def system
+  "The whole system:
+   * Persistence — migrations and db connection
+   * Webserver   — http-kit"
   {::ds/defs
    {;; Environmental variables
     :env {:jdbc-url (or (System/getenv "JDBC_DATABASE_URL")
