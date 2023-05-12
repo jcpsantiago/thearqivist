@@ -44,6 +44,8 @@
                    (mulog/log ::starting-server
                               :local-time (java.time.LocalDateTime/now)
                               :port (:port options))
+
+                   ;; TODO: add the actual server :)
                    "fooooo"))
                    ;; (http/run-server handler options)))
 
