@@ -16,8 +16,8 @@
   (:require
    ;; REPL Workflow
    [jcpsantiago.system :refer [system]]
-   [donut.system :as ds]
-   [donut.system.repl :as dsr]
+   [donut.system :as donut]
+   [donut.system.repl :as donut-repl]
    [clojure.tools.namespace.repl :as namespace]
 
    ;; REPL Workflow
@@ -45,7 +45,7 @@
   []
   (println "---------------------------------------------------------")
   (println "System Management:")
-  (println "(dsr/restart)                  ; restarts the system and reloads namespaces")
+  (println "(restart)                      ; restarts the system and reloads namespaces")
   (println)
   (println "Namesapece Management:")
   (println "(namespace/refresh)            ; refresh all changed namespaces")
@@ -73,13 +73,28 @@
 
 ;; ---------------------------------------------------------
 ;; Starting the system
-(defmethod ds/named-system :donut.system/repl
+(defmethod donut/named-system :donut.system/repl
   [_]
   (mulog/log ::starting-system :local-time (java.time.LocalDateTime/now))
   system)
 
+(defn start
+  "Start system with donut, optionally passing a named system"
+  ([] (donut-repl/start))
+  ([system-config] (donut-repl/start system-config)))
+
+(defn stop
+  "Stop the currently running system"
+  []  (donut-repl/stop))
+
+(defn restart
+  "Restart the system with donut repl,
+  Uses clojure.tools.namespace.repl to reload namespaces
+  `(clojure.tools.namespace.repl/refresh :after 'donut.system.repl/start)`"
+  [] (donut-repl/restart))
+
 (println "Starting system...")
-(dsr/start)
+(start)
 (println "Done! All systems online.")
 (println)
 
