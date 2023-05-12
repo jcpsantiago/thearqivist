@@ -8,6 +8,16 @@
    [com.brunobonacci.mulog :as mulog]
    [org.httpkit.server :as http]))
 
+(def event-logger
+  "mulog log publisher component"
+  #::donut{:start (fn mulog-publisher-start
+                    [{{:keys [dev]} ::donut/config}]
+                    (mulog/start-publisher! dev))
+           :stop (fn mulog-publisher-stop
+                   [{::donut/keys [instance]}]
+                   (instance))
+           :config {:dev {:type :console :pretty? true}}})
+
 (def migrations
   "Database migration component using migratus"
   #::donut{:start (fn migrate-database [{{:keys [creds]} ::donut/config}]
@@ -78,6 +88,9 @@
                                :max-lifetime 300000
                                :jdbc-url (or (System/getenv "JDBC_DATABASE_URL")
                                              "jdbc:postgresql://localhost/arqivist?user=arqivist&password=arqivist")}}
+
+    ;; Event logger
+    :event-log {:publisher event-logger}
 
     ;; Persistence components
     :db {:migrations migrations
