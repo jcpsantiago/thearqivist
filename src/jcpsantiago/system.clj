@@ -10,32 +10,34 @@
 
 (def migrations
   "Database migration component using migratus"
-  #::donut{:start (fn [{{:keys [creds]} ::donut/config}]
+  #::donut{:start (fn migrate-database [{{:keys [creds]} ::donut/config}]
                     (mulog/log ::migrating-db :local-time (java.time.LocalDateTime/now))
-                 ;; TODO: wrap in a try?
-                 ;; should we allow the app to boot if there is no database available?
-                    (migratus/migrate creds)
-                 ;; TODO: why are we returning true here? Do we have to return something at all?
-                    true)
+                    ;; TODO: wrap in a try?
+                    ;; should we allow the app to boot if there is no database available?
+                    (migratus/migrate creds))
            :config {:creds {:store :database
                             :migrations-dir "resources/migrations"
                             :db {:datasource (donut/ref [:db :db-connection])}}}})
 
 (def db-connection
   "Database connection component.
-   Uses Hikari to create and manage a connection pool."
-  #::donut{:start (fn [{{:keys [options]} ::donut/config}]
-                    (mulog/log ::creating-db-datasource :local-time (java.time.LocalDateTime/now))
+   Uses HikariCP to create and manage a connection pool."
+  #::donut{:start (fn create-db-connection
+                    [{{:keys [options]} ::donut/config}]
+                    (mulog/log ::creating-db-connection :local-time (java.time.LocalDateTime/now))
                     (hikari/make-datasource options))
 
-           :stop (fn [{::donut/keys [instance]}]
-                   (mulog/log ::closing-db-datasource :local-time (java.time.LocalDateTime/now))
+           :stop (fn closing-db-connection
+                   [{::donut/keys [instance]}]
+                   (mulog/log ::closing-db-connection
+                              :local-time (java.time.LocalDateTime/now))
                    (hikari/close-datasource instance))
            :config {:options (donut/ref [:env :datasource-options])}})
 
 (def http-server
   "Webserver component using http-kit"
-  #::donut{:start (fn [{{:keys [system options]} ::donut/config}]
+  #::donut{:start (fn start-server
+                    [{{:keys [system options]} ::donut/config}]
                     (let [handler (str system)]
                       (mulog/log ::starting-server
                                  :local-time (java.time.LocalDateTime/now)
@@ -45,12 +47,13 @@
                       "fooooo"))
                    ;; (http/run-server handler options)))
 
-           :stop (fn [{::donut/keys [instance]}]
+           :stop (fn stop-server
+                   [{::donut/keys [instance]}]
                    (mulog/log ::stopping-server :local-time (java.time.LocalDateTime/now))
                    (when-not (nil? instance)
                      (instance :timeout 100)))
 
-        ;; TODO: review this
+           ;; TODO: review this
            :config {:system {:db-connection (donut/ref [:db :db-connection])}
                     :options {:port (donut/ref [:env :port])
                               :join? false}}})
