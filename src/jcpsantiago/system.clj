@@ -81,8 +81,10 @@
 
 (def system
   "The whole system:
-   * Persistence — migrations and db connection
-   * Webserver   — http-kit"
+   * Cache        — atom to keep data between API calls
+   * Event logger — mulog publishing as edn, json in prod (WIP)
+   * Persistence  — migrations and db connection
+   * Webserver    — http-kit"
 
    ;; TODO:
    ;; * Add tasks with chime as task scheduler (using channels?)
