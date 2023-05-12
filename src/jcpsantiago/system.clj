@@ -12,11 +12,12 @@
   #::ds{:start (fn [{{:keys [creds]} ::ds/config}]
                  (mulog/log ::migrating-db)
                  ;; TODO: wrap in a try?
+                 ;; should we allow the app to boot if there is no database available?
                  (migratus/migrate creds)
                  ;; TODO: why are we returning true here? Do we have to return something at all?
                  true)
         :config {:creds {:store :database
-                         :db {:datasource (ds/ref [:db :db])}}}})
+                         :db {:datasource (ds/ref [:db :db-connection])}}}})
 
 (def db-connection
   #::ds{:start (fn [{{:keys [datasource-options]} ::ds/config}]
@@ -47,7 +48,7 @@
                   (instance :timeout 100)))
 
         ;; TODO: review this
-        :config {:system {:db-connection (ds/ref [:db :db])}
+        :config {:system {:db-connection (ds/ref [:db :db-connection])}
                  :options {:port (ds/ref [:env :port])
                            :join? false}}})
 
