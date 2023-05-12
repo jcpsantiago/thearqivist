@@ -13,18 +13,26 @@
   #::donut{:start (fn mulog-publisher-start
                     [{{:keys [dev]} ::donut/config}]
                     (mulog/start-publisher! dev))
+
            :stop (fn mulog-publisher-stop
                    [{::donut/keys [instance]}]
                    (instance))
+
            :config {:dev {:type :console :pretty? true}}})
 
 (def migrations
   "Database migration component using migratus"
-  #::donut{:start (fn migrate-database [{{:keys [creds]} ::donut/config}]
+  #::donut{:start (fn migrate-database
+                    [{{:keys [creds]} ::donut/config}]
                     (mulog/log ::migrating-db :local-time (java.time.LocalDateTime/now))
-                    ;; TODO: wrap in a try?
-                    ;; should we allow the app to boot if there is no database available?
-                    (migratus/migrate creds))
+                    (try
+                      (migratus/migrate creds)
+                      (catch
+                       org.postgresql.util.PSQLException e
+                        (mulog/log ::connecting-db-failed
+                                   :error-message (ex-message e)
+                                   :error-data (ex-data e)))))
+
            :config {:creds {:store :database
                             :migrations-dir "resources/migrations"
                             :db {:datasource (donut/ref [:db :db-connection])}}}})
@@ -42,6 +50,7 @@
                    (mulog/log ::closing-db-connection
                               :local-time (java.time.LocalDateTime/now))
                    (hikari/close-datasource instance))
+
            :config {:options (donut/ref [:env :datasource-options])}})
 
 (def http-server
@@ -61,10 +70,12 @@
                    [{::donut/keys [instance]}]
                    (mulog/log ::stopping-server :local-time (java.time.LocalDateTime/now))
                    (when-not (nil? instance)
-                     (instance :timeout 100)))
+                     (println "shutting down")))
+                     ;; (instance :timeout 100)))
 
            ;; TODO: review this
-           :config {:system {:db-connection (donut/ref [:db :db-connection])}
+           :config {:system {:db-connection (donut/ref [:db :db-connection])
+                             :cache (donut/ref [:cache :cache])}
                     :options {:port (donut/ref [:env :port])
                               :join? false}}})
 
@@ -74,13 +85,12 @@
    * Webserver   — http-kit"
 
    ;; TODO:
-   ;; * Add chime as a task scheduler
-   ;; * mulog component?
-   ;; * cache to keep data in-between API calls during interactive use
+   ;; * Add tasks with chime as task scheduler (using channels?)
 
   {::donut/defs
    {;; Environmental variables
-    :env {:port (or (System/getenv "ARQIVIST_PORT") 8989)
+    :env {:port (or (parse-long (System/getenv "ARQIVIST_PORT")) 
+                    8989)
           :datasource-options {;; NOTE: No idea what each of these actually do, should learn :D
                                :maximum-pool-size 5
                                :minimum-idle 2
@@ -88,6 +98,10 @@
                                :max-lifetime 300000
                                :jdbc-url (or (System/getenv "JDBC_DATABASE_URL")
                                              "jdbc:postgresql://localhost/arqivist?user=arqivist&password=arqivist")}}
+
+    ;; Cache component to hold data between API calls
+    ;; TODO: explore core.cache instead of just an atom
+    :cache {:cache #::donut{:start (atom {})}}
 
     ;; Event logger
     :event-log {:publisher event-logger}
@@ -98,3 +112,4 @@
 
     ;; HTTP server components
     :http {:server http-server}}})
+
