@@ -32,6 +32,12 @@
 ;; Help
 
 (println "---------------------------------------------------------")
+(println "Welcome to The Arqivist's dev environment")
+(println)
+(println)
+(println "                          🧙‍♂️ ")
+(println)
+(println)
 (println "Loading custom user namespace tools...")
 (println "---------------------------------------------------------")
 
@@ -66,11 +72,16 @@
 ;; ---------------------------------------------------------
 
 ;; ---------------------------------------------------------
-;; Start 
+;; Starting the system
 (defmethod ds/named-system :donut.system/repl
   [_]
   (mulog/log ::starting-system :local-time (java.time.LocalDateTime/now))
   system)
+
+(println "Starting system...")
+(dsr/start)
+(println "Done! All systems online.")
+(println)
 
 ;; ---------------------------------------------------------
 ;; Start Portal and capture all evaluation results
