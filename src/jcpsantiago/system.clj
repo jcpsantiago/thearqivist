@@ -10,22 +10,24 @@
 
 (def migrations
   #::ds{:start (fn [{{:keys [creds]} ::ds/config}]
-                 (mulog/log ::migrating-db)
+                 (mulog/log ::migrating-db :local-time (java.time.LocalDateTime/now))
                  ;; TODO: wrap in a try?
                  ;; should we allow the app to boot if there is no database available?
+                 (println "foo")
                  (migratus/migrate creds)
                  ;; TODO: why are we returning true here? Do we have to return something at all?
                  true)
         :config {:creds {:store :database
+                         :migrations-dir "resources/migrations"
                          :db {:datasource (ds/ref [:db :db-connection])}}}})
 
 (def db-connection
   #::ds{:start (fn [{{:keys [datasource-options]} ::ds/config}]
-                 (mulog/log ::creating-db-datasource)
+                 (mulog/log ::creating-db-datasource :local-time (java.time.LocalDateTime/now))
                  (hikari/make-datasource datasource-options))
 
         :stop (fn [{::ds/keys [instance]}]
-                (mulog/log ::closing-db-datasource)
+                (mulog/log ::closing-db-datasource :local-time (java.time.LocalDateTime/now))
                 (hikari/close-datasource instance))
 
         :config {:datasource-options {;; TODO: learn what these options actually do
@@ -39,11 +41,14 @@
 (def http-server
   #::ds{:start (fn [{{:keys [system options]} ::ds/config}]
                  (let [handler (str system)]
-                   (mulog/log ::starting-server :port (:port options))
-                   (http/run-server handler options)))
+                   (mulog/log ::starting-server
+                              :local-time (java.time.LocalDateTime/now)
+                              :port (:port options))
+                   "fooooo"))
+                   ;; (http/run-server handler options)))
 
         :stop (fn [{::ds/keys [instance]}]
-                (mulog/log ::stopping-server)
+                (mulog/log ::stopping-server :local-time (java.time.LocalDateTime/now))
                 (when-not (nil? instance)
                   (instance :timeout 100)))
 
