@@ -15,6 +15,9 @@
   "Tools for REPL Driven Development"
   (:require
    ;; REPL Workflow
+   [jcpsantiago.system :refer [system]]
+   [donut.system :as ds]
+   [donut.system.repl :as dsr]
    [clojure.tools.namespace.repl :as namespace]
 
    ;; REPL Workflow
@@ -35,6 +38,9 @@
 (defn help
   []
   (println "---------------------------------------------------------")
+  (println "System Management:")
+  (println "(dsr/restart)                  ; restarts the system and reloads namespaces")
+  (println)
   (println "Namesapece Management:")
   (println "(namespace/refresh)            ; refresh all changed namespaces")
   (println "(namespace/refresh-all)        ; refresh all namespaces")
@@ -61,6 +67,13 @@
 
 
 ;; ---------------------------------------------------------
+;; Start 
+(defmethod ds/named-system :donut.system/repl
+  [_]
+  (mulog/log ::starting-system :local-time (java.time.LocalDateTime/now))
+  system)
+
+;; ---------------------------------------------------------
 ;; Start Portal and capture all evaluation results
 
 ;; Open Portal window in browser with dark theme
@@ -78,7 +91,7 @@
 ;; Mulog events and publishing
 
 ;; set event global context - information added to every event for REPL workflow
-(mulog/set-global-context! {:app-name "Practicalli Service",
+(mulog/set-global-context! {:app-name "The Arqivist",
                             :version "0.1.0", :env "dev"})
 
 (def mulog-tap-publisher
