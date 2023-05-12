@@ -93,11 +93,6 @@
   `(clojure.tools.namespace.repl/refresh :after 'donut.system.repl/start)`"
   [] (donut-repl/restart))
 
-(println "Starting system...")
-(start)
-(println "Done! All systems online.")
-(println)
-
 ;; ---------------------------------------------------------
 ;; Start Portal and capture all evaluation results
 
