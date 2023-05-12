@@ -2,7 +2,7 @@
   "Sets up the system components using donut.system to enable
    a REPL-heavy lifestyle."
   (:require
-   [donut.system :as ds]
+   [donut.system :as donut]
    [hikari-cp.core :as hikari]
    [migratus.core :as migratus]
    [com.brunobonacci.mulog :as mulog]
@@ -10,67 +10,71 @@
 
 (def migrations
   "Database migration component using migratus"
-  #::ds{:start (fn [{{:keys [creds]} ::ds/config}]
-                 (mulog/log ::migrating-db :local-time (java.time.LocalDateTime/now))
+  #::donut{:start (fn [{{:keys [creds]} ::donut/config}]
+                    (mulog/log ::migrating-db :local-time (java.time.LocalDateTime/now))
                  ;; TODO: wrap in a try?
                  ;; should we allow the app to boot if there is no database available?
-                 (migratus/migrate creds)
+                    (migratus/migrate creds)
                  ;; TODO: why are we returning true here? Do we have to return something at all?
-                 true)
-        :config {:creds {:store :database
-                         :migrations-dir "resources/migrations"
-                         :db {:datasource (ds/ref [:db :db-connection])}}}})
+                    true)
+           :config {:creds {:store :database
+                            :migrations-dir "resources/migrations"
+                            :db {:datasource (donut/ref [:db :db-connection])}}}})
 
 (def db-connection
   "Database connection component.
    Uses Hikari to create and manage a connection pool."
-  #::ds{:start (fn [{{:keys [datasource-options]} ::ds/config}]
-                 (mulog/log ::creating-db-datasource :local-time (java.time.LocalDateTime/now))
-                 (hikari/make-datasource datasource-options))
+  #::donut{:start (fn [{{:keys [options]} ::donut/config}]
+                    (mulog/log ::creating-db-datasource :local-time (java.time.LocalDateTime/now))
+                    (hikari/make-datasource options))
 
-        :stop (fn [{::ds/keys [instance]}]
-                (mulog/log ::closing-db-datasource :local-time (java.time.LocalDateTime/now))
-                (hikari/close-datasource instance))
-
-        :config {:datasource-options {;; TODO: learn what these options actually do
-                                      :maximum-pool-size 5
-                                      :minimum-idle 2
-                                      :idle-timeout 12000
-                                      :max-lifetime 300000
-                                      ;; TODO: should this whole config map be in :env?
-                                      :jdbc-url (ds/ref [:env :jdbc-url])}}})
+           :stop (fn [{::donut/keys [instance]}]
+                   (mulog/log ::closing-db-datasource :local-time (java.time.LocalDateTime/now))
+                   (hikari/close-datasource instance))
+           :config {:options (donut/ref [:env :datasource-options])}})
 
 (def http-server
   "Webserver component using http-kit"
-  #::ds{:start (fn [{{:keys [system options]} ::ds/config}]
-                 (let [handler (str system)]
-                   (mulog/log ::starting-server
-                              :local-time (java.time.LocalDateTime/now)
-                              :port (:port options))
+  #::donut{:start (fn [{{:keys [system options]} ::donut/config}]
+                    (let [handler (str system)]
+                      (mulog/log ::starting-server
+                                 :local-time (java.time.LocalDateTime/now)
+                                 :port (:port options))
 
                    ;; TODO: add the actual server :)
-                   "fooooo"))
+                      "fooooo"))
                    ;; (http/run-server handler options)))
 
-        :stop (fn [{::ds/keys [instance]}]
-                (mulog/log ::stopping-server :local-time (java.time.LocalDateTime/now))
-                (when-not (nil? instance)
-                  (instance :timeout 100)))
+           :stop (fn [{::donut/keys [instance]}]
+                   (mulog/log ::stopping-server :local-time (java.time.LocalDateTime/now))
+                   (when-not (nil? instance)
+                     (instance :timeout 100)))
 
         ;; TODO: review this
-        :config {:system {:db-connection (ds/ref [:db :db-connection])}
-                 :options {:port (ds/ref [:env :port])
-                           :join? false}}})
+           :config {:system {:db-connection (donut/ref [:db :db-connection])}
+                    :options {:port (donut/ref [:env :port])
+                              :join? false}}})
 
 (def system
   "The whole system:
    * Persistence — migrations and db connection
    * Webserver   — http-kit"
-  {::ds/defs
+
+   ;; TODO:
+   ;; * Add chime as a task scheduler
+   ;; * mulog component?
+   ;; * cache to keep data in-between API calls during interactive use
+
+  {::donut/defs
    {;; Environmental variables
-    :env {:jdbc-url (or (System/getenv "JDBC_DATABASE_URL")
-                        "jdbc:postgresql://localhost/arqivist?user=arqivist&password=arqivist")
-          :port (or (System/getenv "ARQIVIST_PORT") 8989)}
+    :env {:port (or (System/getenv "ARQIVIST_PORT") 8989)
+          :datasource-options {;; NOTE: No idea what each of these actually do, should learn :D
+                               :maximum-pool-size 5
+                               :minimum-idle 2
+                               :idle-timeout 12000
+                               :max-lifetime 300000
+                               :jdbc-url (or (System/getenv "JDBC_DATABASE_URL")
+                                             "jdbc:postgresql://localhost/arqivist?user=arqivist&password=arqivist")}}
 
     ;; Persistence components
     :db {:migrations migrations
