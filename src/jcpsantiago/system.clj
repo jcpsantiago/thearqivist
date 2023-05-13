@@ -57,10 +57,10 @@
   #::donut{:start (fn start-server
                     [{{:keys [system options]} ::donut/config}]
                     (mulog/log ::starting-server
-                                 :local-time (java.time.LocalDateTime/now)
-                                 :port (:port options)
-                      ;; TODO: add the actual server :)
-                      "fooooo"))
+                               :local-time (java.time.LocalDateTime/now)
+                               :port (:port options)
+                               ;; TODO: add the actual server :)
+                               "fooooo"))
            ;; (http/run-server handler options)))
 
            :stop (fn stop-server
