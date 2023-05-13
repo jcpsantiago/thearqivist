@@ -10,6 +10,7 @@
    * get-started"
   [_]
   ["/confluence"
+   {:swagger {:tags ["Confluence"]}}
    ["/descriptor.json"
     {:get
      {:summary "Serves the Application Descriptor file"

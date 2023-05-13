@@ -8,20 +8,22 @@
    * slash    — triggered after the user uses the `/arqive` slash command
    * redirect — called as part of the OAuth process at the end of installation"
   [_]
-  [["/slack/shortcut"
+  ["/slack"
+   {:swagger {:tags ["Slack"]}}
+   ["/shortcut"
     {:post
-     {:summary "Handles requests started by the Slack message actions shortcut"
-      :description ""
+     {:summary "Target for Message Shortcut interactions"
+      :description "This endpoint receives all interactions initiated by clicking the Message Shortcut button. It also receives all follow-up interactions with the use via modals."
 
       ;; TODO: learn how to set this up correctly :s
-      :parameters {:form :jcpsantiago.arqivist.api.slack.spec/shortcut-body}
+      ;; :parameters {:form :jcpsantiago.arqivist.api.slack.spec/shortcut-body}
       :responses {200 {:body string?}}
       :handler handler/slack-shortcut}}]
-   ["/slack/redirect"
+
+   ["/redirect"
     {:get
-     {:summary ""
-      :description ""
-      :parameters
-      {:body :jcpsantiago.arqivist.api.slack.spec/redirect-body}
+     {:summary "OAuth2 redirect target"
+      :description "This endpoint receives the data about the workspace, after a user successfully added the app to their account."
+      ;; :parameters {:body :jcpsantiago.arqivist.api.slack.spec/redirect-body}
       :responses {200 {:body string?}}
-      :handler (fn [x] (println "REDIRECT HANDLER"))}}]])
+      :handler {:status 200 :body "HELLO"}}}]])

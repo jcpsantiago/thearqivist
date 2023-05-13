@@ -37,15 +37,17 @@
   https://swagger.io/docs/specification/api-general-info/"
   ["/swagger.json"
    {:get {:no-doc  true
-          :swagger {:info {:title "The Arqivist"
-                           :description "Creates Confluence pages from Slack conversations"
-                           :version "0.1.0"
-                           :termsOfService "https://arqivist.app/terms"
-                           :contact {:name "João Santiago"
-                                     :url "apps@jcpsantiago.xyz"}
-                           :license {:name (str "© João Santiago, " (java.time.Year/now))
-                                     :url "https://arqivist.app/terms"}
-                           :x-logo {:url "./favicon.png"}}}
+          :swagger
+          {:info
+           {:title "The Arqivist"
+            :description "Creates Confluence pages from Slack conversations"
+            :version "0.1.0"
+            :termsOfService "https://arqivist.app/terms"
+            :contact {:name "João Santiago"
+                      :url "apps@jcpsantiago.xyz"}
+            :license {:name (str "© João Santiago, " (java.time.Year/now))
+                      :url "https://arqivist.app/terms"}
+            :x-logo {:url "./favicon.png"}}}
           :handler (api-docs/create-swagger-handler)}}])
 
 ;; Global route Configuration - coersion and middleware applied to all routes
@@ -83,7 +85,6 @@
      ;; The Arqivist routes
      ["/api"
       ["/v1"
-       {:swagger {:tags ["The Arqivist"]}}
        (slack/routes system)
        (confluence/routes system)]]]
 
