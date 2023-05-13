@@ -62,16 +62,16 @@
                                  :local-time (java.time.LocalDateTime/now)
                                  :port (:port options))
 
-                   ;; TODO: add the actual server :)
+                      ;; TODO: add the actual server :)
                       "fooooo"))
-                   ;; (http/run-server handler options)))
+           ;; (http/run-server handler options)))
 
            :stop (fn stop-server
                    [{::donut/keys [instance]}]
                    (mulog/log ::stopping-server :local-time (java.time.LocalDateTime/now))
                    (when-not (nil? instance)
                      (println "shutting down")))
-                     ;; (instance :timeout 100)))
+           ;; (instance :timeout 100)))
 
            ;; TODO: review this
            :config {:system {:db-connection (donut/ref [:db :db-connection])
@@ -86,8 +86,8 @@
    * Persistence  — migrations and db connection
    * Webserver    — http-kit"
 
-   ;; TODO:
-   ;; * Add tasks with chime as task scheduler (using channels?)
+  ;; TODO:
+  ;; * Add tasks with chime as task scheduler (using channels?)
 
   {::donut/defs
    {;; Environmental variables

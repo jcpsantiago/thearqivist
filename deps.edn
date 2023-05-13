@@ -5,7 +5,7 @@
  {;; Application
   org.clojure/clojure {:mvn/version "1.11.1"}
 
-  ;;System
+  ;; System
   party.donut/system {:mvn/version "0.0.203"}
 
   ;; Logging
@@ -25,8 +25,7 @@
   ;; HTTP server
   http-kit/http-kit {:mvn/version "2.6.0"}
   metosin/reitit {:mvn/version "0.6.0"}
-  org.clojure/data.json {:mvn/version "2.4.0"}
-  }
+  org.clojure/data.json {:mvn/version "2.4.0"}}
 
  :aliases
  {;; Clojure.main execution of application
