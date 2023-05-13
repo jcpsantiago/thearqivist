@@ -5,7 +5,7 @@ _Summary of the change and link to any relevant tickets. New aliases should incl
 Resolve #
 Refer #
 
-:octocat Type of change
+:octocat: Type of change
 
 _Please tick `x` relevant options, delete those not relevant_
 
@@ -15,13 +15,13 @@ _Please tick `x` relevant options, delete those not relevant_
 - [ ] Documentation
 - [ ] Continuous integration workflow
 
-:beetle How Has This Been Tested?
+:beetle: How Has This Been Tested?
 
 - [ ] unit test
 - [ ] linter check
 - [x] GitHub Action checkers
 
-:eyes Checklist
+:eyes: Checklist
 
 - [ ] Code follows the [Practicalli cljstyle configuration](https://practical.li/clojure/clojure-cli/clojure-style/#cljstyle)
 - [ ] Add / update alias docs and README where relevant
