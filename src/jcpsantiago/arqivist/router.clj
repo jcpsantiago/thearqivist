@@ -19,6 +19,7 @@
    ;; Arqivist Routing
    [jcpsantiago.arqivist.api.system-admin.router :as system-admin]
    [jcpsantiago.arqivist.api.slack.router :as slack]
+   [jcpsantiago.arqivist.api.confluence.router :as confluence]
 
    ;; Self-documenting API
    [reitit.swagger    :as api-docs]
@@ -83,8 +84,8 @@
      ["/api"
       ["/v1"
        {:swagger {:tags ["The Arqivist"]}}
-       (slack/routes system)]]]
-       ;; TODO: Add Confluence routes
+       (slack/routes system)
+       (confluence/routes system)]]]
 
     ;; Router configuration - middleware, coersion & content negotiation
     router-configuration)
