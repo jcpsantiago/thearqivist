@@ -38,6 +38,12 @@ After installing The Arqivist in Slack, you can interact with the bot in two way
 * Compliance
 * Backup
 
+## Hacking locally
+
+* Start a Postgres instance with `docker compose up -d postgres`
+* Start a REPL with `make repl`
+* Start the system with `(start)` in the Clojure REPL
+
 ## Contributing
 
 If you found a bug, or want to propose new features please open an issue. PRs are also welcome!
