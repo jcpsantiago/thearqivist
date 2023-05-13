@@ -5,8 +5,7 @@
    [com.brunobonacci.mulog :as mulog]
    [donut.system :as donut]
    [hikari-cp.core :as hikari]
-   [migratus.core :as migratus]
-   [org.httpkit.server :as http]))
+   [migratus.core :as migratus]))
 
 (def event-logger
   "mulog log publisher component"
@@ -57,11 +56,9 @@
   "Webserver component using http-kit"
   #::donut{:start (fn start-server
                     [{{:keys [system options]} ::donut/config}]
-                    (let [handler (str system)]
-                      (mulog/log ::starting-server
+                    (mulog/log ::starting-server
                                  :local-time (java.time.LocalDateTime/now)
-                                 :port (:port options))
-
+                                 :port (:port options)
                       ;; TODO: add the actual server :)
                       "fooooo"))
            ;; (http/run-server handler options)))
