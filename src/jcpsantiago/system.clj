@@ -88,8 +88,8 @@
 
   {::donut/defs
    {;; Environmental variables
-    :env {:port (or (parse-long (System/getenv "ARQIVIST_PORT"))
-                    8989)
+    :env {:port (parse-long (or (System/getenv "ARQIVIST_PORT")
+                                "8989"))
           :datasource-options {;; NOTE: No idea what each of these actually do, should learn :D
                                :maximum-pool-size 5
                                :minimum-idle 2
