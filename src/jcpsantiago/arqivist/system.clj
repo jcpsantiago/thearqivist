@@ -1,10 +1,12 @@
-(ns jcpsantiago.system
+(ns jcpsantiago.arqivist.system
   "Sets up the system components using donut.system to enable
    a REPL-heavy lifestyle."
   (:require
    [com.brunobonacci.mulog :as mulog]
    [donut.system :as donut]
    [hikari-cp.core :as hikari]
+   [org.httpkit.server :as http]
+   [jcpsantiago.arqivist.router :as router]
    [migratus.core :as migratus]))
 
 (def event-logger
@@ -58,10 +60,8 @@
                     [{{:keys [system options]} ::donut/config}]
                     (mulog/log ::starting-server
                                :local-time (java.time.LocalDateTime/now)
-                               :port (:port options)
-                               ;; TODO: add the actual server :)
-                               "fooooo"))
-           ;; (http/run-server handler options)))
+                               :port (:port options))
+                    (http/run-server (router/app system) options))
 
            :stop (fn stop-server
                    [{::donut/keys [instance]}]
@@ -76,6 +76,7 @@
                     :options {:port (donut/ref [:env :port])
                               :join? false}}})
 
+#_{:clj-kondo/ignore [:unused-binding]}
 (def system
   "The whole system:
    * Cache        — atom to keep data between API calls

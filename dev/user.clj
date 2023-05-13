@@ -15,7 +15,7 @@
   "Tools for REPL Driven Development"
   (:require
    ;; REPL Workflow
-   [jcpsantiago.system :refer [system]]
+   [jcpsantiago.arqivist.system :refer [system]]
    [donut.system :as donut]
    [donut.system.repl :as donut-repl]
    [clojure.tools.namespace.repl :as namespace]
