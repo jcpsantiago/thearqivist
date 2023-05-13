@@ -2,10 +2,10 @@
   "Sets up the system components using donut.system to enable
    a REPL-heavy lifestyle."
   (:require
+   [com.brunobonacci.mulog :as mulog]
    [donut.system :as donut]
    [hikari-cp.core :as hikari]
    [migratus.core :as migratus]
-   [com.brunobonacci.mulog :as mulog]
    [org.httpkit.server :as http]))
 
 (def event-logger
@@ -91,7 +91,7 @@
 
   {::donut/defs
    {;; Environmental variables
-    :env {:port (or (parse-long (System/getenv "ARQIVIST_PORT")) 
+    :env {:port (or (parse-long (System/getenv "ARQIVIST_PORT"))
                     8989)
           :datasource-options {;; NOTE: No idea what each of these actually do, should learn :D
                                :maximum-pool-size 5
