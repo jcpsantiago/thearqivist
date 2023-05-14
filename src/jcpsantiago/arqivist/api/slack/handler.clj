@@ -19,9 +19,9 @@
              :local-time (java.time.LocalDateTime/now)))
 
 ;; Shortcut entrypoint
-(defn slack-shortcut
+(defn message-shortcut
   "Handler function for /slack/shortcut route,
-  NOTE: request validated via body parameters in router definition using billie.fraud.spec
+  NOTE: request validated via form parameters in router definition using jcpsantiago.arqivist.api.slack.spec
   Arguments: TODO"
   [{{{{payload-type :type} :payload} :form} :parameters}]
   (mulog/log ::handling-slack-shortcut
@@ -37,3 +37,13 @@
   {:status 200
    :body ""
    :headers {}})
+
+;; ------------------------------------------------------
+;; Handlers for Slack Slash commands
+
+(defn slash-command
+  "Handler function for /slack/slash route"
+  [_]
+  (mulog/log ::handling-slack-slash-command
+             :local-time (java.time.LocalDateTime/now))
+  {:status 200 :body "" :headers {}})
