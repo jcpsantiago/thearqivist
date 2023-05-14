@@ -55,6 +55,7 @@
   "Reitit configuration of coercion, data format transformation and middleware for all routing"
   {:data {:coercion   reitit.coercion.spec/coercion
           :muuntaja   muuntaja/instance
+          ;; TODO: Add middleware for Slack security checks
           :middleware [;; swagger feature for OpenAPI documentation
                        api-docs/swagger-feature
                        ;; query-params & form-params
