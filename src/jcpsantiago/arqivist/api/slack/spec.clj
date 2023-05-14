@@ -1,9 +1,30 @@
 (ns jcpsantiago.arqivist.api.slack.spec
+  "Specs for Slack data, including incoming requests, db
+  representations and internal maps."
   (:require [clojure.spec.alpha :as s]))
 
 
 ;; Incoming requests -------------------------------------------------------
-(s/def ::slash-body
+
+;; Slash commands are sent via POST requests with Content-type application/x-www-form-urlencoded.
+;; See the docs in https://api.slack.com/interactivity/slash-commands#app_command_handling
+;;
+;; Example payload: 
+;; &api_app_id=A123456
+;; &channel_id=C2147483705
+;; &channel_name=test
+;; &command=/weather
+;; &enterprise_id=E0001
+;; &enterprise_name=Globular%20Construct%20Inc
+;; &response_url=https://hooks.slack.com/commands/1234/5678
+;; &team_domain=example
+;; &team_id=T0001
+;; &text=94070
+;; &trigger_id=13345224609.738474920.8088930838d88f008e0
+;; &user_id=U2147483697
+;; &user_name=Steve
+;; token=gIkuvaNzQIHg97ATvDxqgjtO
+(s/def ::slash-form-params
   (s/keys 
     :req-un [::api_app_id ::trigger_id ::command ::channel_id ::token
              ::channel_name ::user_id ::is_enterprise_install ::team_id
