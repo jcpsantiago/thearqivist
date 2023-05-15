@@ -6,8 +6,8 @@
 (deftest application-test
   (testing "TODO: Start with a failing test, make it pass, then refactor"
 
-    (is (= "thearqivist application developed by the secret engineering team"
+    (is (= "The Arqivist is brought to you by Bursting burrito"
            (core/greet)))
 
-    (is (= "thearqivist application developed by the Practicalli Engineering team"
+    (is (= "The Arqivist is brought to you by Practicalli Engineering"
            (core/greet {:team-name "Practicalli Engineering"})))))
