@@ -46,7 +46,7 @@ services:
   postgres:
     image: "postgres:15.2-alpine"
     restart: always
-    ports: 
+    ports:
       - "5432:5432"
     environment:
       # superuser password - must not be empty

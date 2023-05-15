@@ -52,7 +52,7 @@ sequenceDiagram
 There are two ways to use the bot in Slack:
 
 * Via a [message shortcut :octicons-link-external-16:](https://api.slack.com/interactivity/shortcuts/using#message_shortcuts)
-* Via the `/arqive` [slash command :octicons-link-external-16:](https://api.slack.com/interactivity/slash-commands) 
+* Via the `/arqive` [slash command :octicons-link-external-16:](https://api.slack.com/interactivity/slash-commands)
 
 The message shortcut is present in the "More actions" or "three dots" button of each message.
 At the moment this method is only used for archiving message threads,
