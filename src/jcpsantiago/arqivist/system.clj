@@ -55,13 +55,13 @@
 (def http-server
   "Webserver component using http-kit"
   #::donut{:start (fn start-server
-                    [{{:keys [system options]} ::donut/config}]
+                    [{{:keys [options]} ::donut/config}]
                     (mulog/log ::starting-server
                                :local-time (java.time.LocalDateTime/now)
                                :port (:port options)))
 
            :stop (fn stop-server
-                   [{::donut/keys [instance]}]
+                   []
                    (mulog/log ::stopping-server :local-time (java.time.LocalDateTime/now)))
 
            ;; TODO: review this
@@ -106,4 +106,3 @@
 
     ;; HTTP server components
     :http {:server http-server}}})
-
