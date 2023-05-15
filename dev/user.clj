@@ -15,6 +15,9 @@
   "Tools for REPL Driven Development"
   (:require
    ;; REPL Workflow
+   [jcpsantiago.arqivist.system :refer [system]]
+   [donut.system :as donut]
+   [donut.system.repl :as donut-repl]
    [clojure.tools.namespace.repl :as namespace]
 
    ;; REPL Workflow
@@ -29,12 +32,21 @@
 ;; Help
 
 (println "---------------------------------------------------------")
+(println "Welcome to The Arqivist's dev environment")
+(println)
+(println)
+(println "                          🧙‍♂️ ")
+(println)
+(println)
 (println "Loading custom user namespace tools...")
 (println "---------------------------------------------------------")
 
 (defn help
   []
   (println "---------------------------------------------------------")
+  (println "System Management:")
+  (println "(restart)                      ; restarts the system and reloads namespaces")
+  (println)
   (println "Namesapece Management:")
   (println "(namespace/refresh)            ; refresh all changed namespaces")
   (println "(namespace/refresh-all)        ; refresh all namespaces")
@@ -59,6 +71,27 @@
 ;; End of Help
 ;; ---------------------------------------------------------
 
+;; ---------------------------------------------------------
+;; Starting the system
+(defmethod donut/named-system :donut.system/repl
+  [_]
+  (mulog/log ::starting-system :local-time (java.time.LocalDateTime/now))
+  system)
+
+(defn start
+  "Start system with donut, optionally passing a named system"
+  ([] (donut-repl/start))
+  ([system-config] (donut-repl/start system-config)))
+
+(defn stop
+  "Stop the currently running system"
+  []  (donut-repl/stop))
+
+(defn restart
+  "Restart the system with donut repl,
+  Uses clojure.tools.namespace.repl to reload namespaces
+  `(clojure.tools.namespace.repl/refresh :after 'donut.system.repl/start)`"
+  [] (donut-repl/restart))
 
 ;; ---------------------------------------------------------
 ;; Start Portal and capture all evaluation results
@@ -73,12 +106,11 @@
 
 ;; ---------------------------------------------------------
 
-
 ;; ---------------------------------------------------------
 ;; Mulog events and publishing
 
 ;; set event global context - information added to every event for REPL workflow
-(mulog/set-global-context! {:app-name "Practicalli Service",
+(mulog/set-global-context! {:app-name "The Arqivist",
                             :version "0.1.0", :env "dev"})
 
 (def mulog-tap-publisher
@@ -95,7 +127,6 @@
 
 ;; ---------------------------------------------------------
 
-
 ;; ---------------------------------------------------------
 ;; Hotload libraries into running REPL
 ;; `deps-*` LSP snippets to add dependency forms
@@ -106,8 +137,8 @@
   (add-libs '{domain/library-name {:mvn/version "1.0.0"}})
 
   ;; Clojure 1.12.x only
-  (add-lib 'library-name)   ; find and add library
-  (sync-deps)               ; load dependencies in deps.edn (if not yet loaded)
+  ;; (add-lib 'library-name)   ; find and add library
+  ;; (sync-deps)               ; load dependencies in deps.edn (if not yet loaded)
   #_()) ; End of rich comment
 ;; ---------------------------------------------------------
 

@@ -11,10 +11,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
-- ci: update MegaLinter and Quality check actions to latest versions
-
-### Changed
-- updates from Practicalli project templates
+* ci: update MegaLinter and Quality check actions to latest versions
+* Use donut.system to create a system, enable REPL-driven development [#5](https://github.com/jcpsantiago/thearqivist/issues/5) 
 
 ## 0.1.0 - 2023-04-20
 
