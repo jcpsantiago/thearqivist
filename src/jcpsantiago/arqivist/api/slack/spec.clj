@@ -23,7 +23,7 @@
 ;; &trigger_id=13345224609.738474920.8088930838d88f008e0
 ;; &user_id=U2147483697
 ;; &user_name=Steve
-;; token=gIkuvaNzQIHg97ATvDxqgjtO
+;; token=<alphanumerical string>
 (s/def ::slash-form-params
   (s/keys
    :req-un [::api_app_id ::trigger_id ::command ::channel_id ::token
