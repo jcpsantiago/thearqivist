@@ -64,11 +64,8 @@
                     (http/run-server (router/app system) options))
 
            :stop (fn stop-server
-                   [{::donut/keys [instance]}]
-                   (mulog/log ::stopping-server :local-time (java.time.LocalDateTime/now))
-                   (when-not (nil? instance)
-                     (println "shutting down")))
-           ;; (instance :timeout 100)))
+                   []
+                   (mulog/log ::stopping-server :local-time (java.time.LocalDateTime/now)))
 
            ;; TODO: review this
            :config {:system {:db-connection (donut/ref [:db :db-connection])
@@ -112,4 +109,3 @@
 
     ;; HTTP server components
     :http {:server http-server}}})
-
