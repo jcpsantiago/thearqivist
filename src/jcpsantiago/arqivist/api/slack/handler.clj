@@ -33,7 +33,7 @@
       "view_submission" (view-submission-handler "placeholder")
       "Payload of unknown type received, swiftly ignored."))
 
-      ;; Immediate response to Slack
+  ;; Immediate response to Slack
   {:status 200
    :body ""
    :headers {}})
