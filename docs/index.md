@@ -3,8 +3,8 @@
 <figure>
     <img src="https://arqivist.app/img/arqivist.jpg"
          alt="The Arqivist's logo is a medieval scribe working on a document"
-	 width=200
-    	 height=200>
+  width=200
+      height=200>
     <figcaption>The Arqivist hard at work</figcaption>
 </figure>
 

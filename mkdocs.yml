@@ -1,4 +1,4 @@
-site_name: The Arqivist docs 
+site_name: The Arqivist docs
 theme:
   name: material
 markdown_extensions:
