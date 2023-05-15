@@ -5,7 +5,6 @@
    [com.brunobonacci.mulog :as mulog]
    [donut.system :as donut]
    [hikari-cp.core :as hikari]
-   [org.httpkit.server :as http]
    [migratus.core :as migratus]))
 
 (def event-logger
