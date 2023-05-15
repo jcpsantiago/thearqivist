@@ -67,8 +67,7 @@
                    [{::donut/keys [instance]}]
                    (mulog/log ::stopping-server :local-time (java.time.LocalDateTime/now))
                    (when-not (nil? instance)
-                     (println "shutting down")))
-           ;; (instance :timeout 100)))
+                     (instance :timeout 100)))
 
            ;; TODO: review this
            :config {:system {:db-connection (donut/ref [:db :db-connection])
