@@ -6,7 +6,6 @@
    [donut.system :as donut]
    [hikari-cp.core :as hikari]
    [org.httpkit.server :as http]
-   [jcpsantiago.arqivist.router :as router]
    [migratus.core :as migratus]))
 
 (def event-logger
@@ -60,14 +59,11 @@
                     [{{:keys [system options]} ::donut/config}]
                     (mulog/log ::starting-server
                                :local-time (java.time.LocalDateTime/now)
-                               :port (:port options))
-                    (http/run-server (router/app system) options))
+                               :port (:port options)))
 
            :stop (fn stop-server
                    [{::donut/keys [instance]}]
-                   (mulog/log ::stopping-server :local-time (java.time.LocalDateTime/now))
-                   (when-not (nil? instance)
-                     (instance :timeout 100)))
+                   (mulog/log ::stopping-server :local-time (java.time.LocalDateTime/now)))
 
            ;; TODO: review this
            :config {:system {:db-connection (donut/ref [:db :db-connection])
