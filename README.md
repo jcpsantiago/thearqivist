@@ -43,6 +43,7 @@ After installing The Arqivist in Slack, you can interact with the bot in two way
 * Start a Postgres instance with `docker compose up -d postgres`
 * Start a REPL with `make repl`
 * Start the system with `(start)` in the Clojure REPL
+* `make lint` to check for format and lint issue, `make lint-fix` to automatically fix them (stage or commit other changes first) - requires node.js locally
 
 ## Contributing
 
