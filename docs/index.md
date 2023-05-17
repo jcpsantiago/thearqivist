@@ -1,4 +1,4 @@
-# Welcome 👋
+# The Arqivist 📓 
 
 <figure>
     <img src="https://arqivist.app/img/arqivist.jpg"
