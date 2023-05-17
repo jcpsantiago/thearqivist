@@ -29,6 +29,8 @@ To respect your data, and assure the safety of your conversations,
 we do not save or log _any_ messages or PII.
 On top of this, the app's code is open-source and auditable by anyone for full transparency.
 
+*[PII]: Personally Identifiable Information
+
 All Slack messages and files are processed without leaving a trail,
 and then saved in your own Confluence instance.
 
