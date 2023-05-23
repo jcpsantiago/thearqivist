@@ -37,3 +37,5 @@ and then saved in your own Confluence instance.
 For these reasons, The Arqivist is **fully GDPR compliant**.
 
 ## Archiving your first messages
+
+WIP
