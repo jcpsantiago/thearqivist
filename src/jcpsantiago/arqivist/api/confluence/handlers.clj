@@ -107,7 +107,7 @@
   [lifecycle-payload tenant_id system]
   (let [db-connection (:db-connection system)
         {:keys [baseUrl]} lifecycle-payload
-          ;; Slack credentials linked to the tenant, used below to uninstall
+        ;; Slack credentials linked to the tenant, used below to uninstall
         {:keys [:slack_teams/access_token
                 :slack_teams/team_name
                 :slack_teams/external_team_id]}
@@ -150,5 +150,3 @@
         "installed" (installed lifecycle-payload tenant_id system)
         "enabled" (enabled lifecycle-payload tenant_id system)
         "uninstalled" (uninstalled lifecycle-payload tenant_id system)))))
-
-
