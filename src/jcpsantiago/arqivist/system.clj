@@ -72,6 +72,7 @@
            ;; TODO: review this
            :config {:system {:db-connection (donut/ref [:db :db-connection])
                              :cache (donut/ref [:cache :cache])}
+                             :env (donut/ref [:env])
                     :options {:port (donut/ref [:env :port])
                               :join? false}}})
 
@@ -88,7 +89,9 @@
 
   {::donut/defs
    {;; Environmental variables
-    :env {:port (parse-long (or (System/getenv "ARQIVIST_PORT")
+    :env {:atlassian {:descriptor-key (or (System/getenv "ARQIVIST_ATLASSIAN_DESCRIPTOR_KEY")
+                                          "thearqivist")}
+          :port (parse-long (or (System/getenv "ARQIVIST_PORT")
                                 "8989"))
           :datasource-options {;; NOTE: No idea what each of these actually do, should learn :D
                                :maximum-pool-size 5
