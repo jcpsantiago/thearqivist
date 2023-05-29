@@ -82,7 +82,7 @@
         (mulog/log ::confluence-space-created :ok true :base-url base-url)
         {:ok true})
       (do
-        (mulog/log ::confluence-space-created :ok false :base-url base-url :error (:body res))
+        (mulog/log ::confluence-space-created :ok false :base-url base-url :exception (:body res))
         {:ok false}))))
 
 (defn tenant-name

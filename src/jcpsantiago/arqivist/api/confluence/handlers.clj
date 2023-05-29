@@ -1,7 +1,7 @@
 (ns jcpsantiago.arqivist.api.confluence.handlers
   (:require
    [com.brunobonacci.mulog :as mulog]
-   [donut.system :as donut]
+   [org.httpkit.client :as httpkit]
    [jcpsantiago.arqivist.api.confluence.utils :as utils]
    [next.jdbc.sql :as sql]))
 
@@ -54,51 +54,46 @@
   Takes a donut.system as input to return a function ready with a db connection which takes
   a ring request as input.
   "
-  [system]
-  (fn [request]
-    (let [db-connection (:db-connection system)
-          lifecycle-payload (:body-params request)
-          {:keys [key clientKey accountId sharedSecret baseUrl displayUrl productType
-                  description serviceEntitlementNumber oauthClientId]} lifecycle-payload
-          url-short (utils/base-url-short baseUrl)
-          {:keys [:atlassian_tenants/tenant_id]} (-> (sql/find-by-keys
-                                                      db-connection
-                                                      :atlassian_tenants
-                                                      {:base_url_short url-short}
-                                                      {:columns [[:id :tenant_id]]})
-                                                     first)
-          data-to-insert {:key key
-                          :client_key clientKey
-                          :tenant_name (utils/tenant-name baseUrl)
-                          :account_id accountId
-                          :shared_secret sharedSecret
-                          :base_url baseUrl
-                          :base_url_short url-short
-                          :display_url displayUrl
-                          :product_type productType
-                          :description description
-                          :service_entitlement_number serviceEntitlementNumber
-                          :oauth_client_id oauthClientId}]
-      (mulog/log ::atlassian-installed :base-url-short url-short)
-      (if (nil? tenant_id)
-        (let [db-insert-fn! (partial sql/insert! db-connection :atlassian_tenants)]
-          (mulog/log ::inserting-new-atlassian-tenant :base-url baseUrl)
-          (-> data-to-insert
-              (db-insert-fn! {:return-keys true})))
-        (do
-          (mulog/log ::updating-existing-atlassian-tenant :base-url baseUrl)
-          (sql/update! db-connection :atlassian_tenants data-to-insert {:id tenant_id})))
-      {:status 200 :body "OK"})))
+  [lifecycle-payload tenant_id system]
+  (let [db-connection (:db-connection system)
+        {:keys [key clientKey accountId sharedSecret baseUrl displayUrl productType
+                description serviceEntitlementNumber oauthClientId]} lifecycle-payload
+        url-short (utils/base-url-short baseUrl)
+        data-to-insert {:key key
+                        :client_key clientKey
+                        :tenant_name (utils/tenant-name baseUrl)
+                        :account_id accountId
+                        :shared_secret sharedSecret
+                        :base_url baseUrl
+                        :base_url_short url-short
+                        :display_url displayUrl
+                        :product_type productType
+                        :description description
+                        :service_entitlement_number serviceEntitlementNumber
+                        :oauth_client_id oauthClientId}]
+    (mulog/log ::atlassian-installed :base-url-short url-short)
+    (if (nil? tenant_id)
+      (let [db-insert-fn! (partial sql/insert! db-connection :atlassian_tenants)]
+        (mulog/log ::inserting-new-atlassian-tenant :base-url baseUrl)
+        (-> data-to-insert
+            (db-insert-fn! {:return-keys true})))
+      (do
+        (mulog/log ::updating-existing-atlassian-tenant :base-url baseUrl)
+        (sql/update! db-connection :atlassian_tenants data-to-insert {:id tenant_id})
+        {:status 200 :body "OK"}))))
 
 (defn enabled
   "
   Ring handler for the 'enabled' event.
   Not used at the moment.
   "
-  [system]
-  (let [descriptor-key (get-in system [:env :atlassian :descriptor-key])]
-    (fn [request]
-      {:status 200 :body "OK"})))
+  [lifecycle-payload _ system]
+  (mulog/log ::atlassian-enabled :base-url (:baseUrl lifecycle-payload) :local-time (java.time.LocalDateTime/now))
+  (let [res (utils/create-space! (get-in system [:env :atlassian :descriptor-key]) lifecycle-payload)]
+    (if (= (:status res) 200)
+      {:status 200 :body "OK"}
+          ;; TODO: something more useful here? This endpint is not consumed by anyone though, only the Atlassian bots
+      {:status 500 :body "ERROR"})))
 
 (defn uninstalled
   "
@@ -109,6 +104,51 @@
   Takes a donut.system object as input, returns a function ready with a database connection,
   and taking a ring request as input.
   "
-  [system]
-  (fn [uninstalled-payload]
+  [lifecycle-payload tenant_id system]
+  (let [db-connection (:db-connection system)
+        {:keys [baseUrl]} lifecycle-payload
+          ;; Slack credentials linked to the tenant, used below to uninstall
+        {:keys [:slack_teams/access_token
+                :slack_teams/team_name
+                :slack_teams/external_team_id]}
+        (-> (sql/find-by-keys db-connection :slack_teams {:atlassian_tenant_id tenant_id})
+            first)]
+    ;; drop the row corresponding to the current tenant, plus the row in  'slack_teams'
+    ;; TODO: wrap in try/catch
+    (mulog/log ::uninstalling-app
+               :base-url baseUrl
+               :slack-team-id external_team_id
+               :slack-team-name team_name
+               :local-time (java.time.LocalDateTime/now))
+    (sql/delete! db-connection :atlassian_tenants {:id tenant_id})
+    ;; TODO: wrap in try/catch
+    @(httpkit/get
+      (str "https://slack.com/api/apps.uninstall?"
+           "client_id=" (get-in system [:env :slack :arqivist-slack-client-id])
+           "&client_secret=" (get-in system [:env :slack :arqivist-slack-client-secret])
+           {:headers {"Content-Type" "application/json; charset=utf-8"}
+            :oauth-token access_token}))
     {:status 200 :body "OK"}))
+
+(defn lifecycle
+  "
+  Handler for the Atlassian lifecycle events.
+  "
+  [system]
+  (fn [request]
+    (let [db-connection (:db-connection system)
+          lifecycle-payload (:body-params request)
+          event-type (:eventType lifecycle-payload)
+          {:keys [:atlassian_tenants/tenant_id]} (-> (sql/find-by-keys
+                                                      db-connection
+                                                      :atlassian_tenants
+                                                      {:base_url_short (utils/base-url-short (:baseUrl lifecycle-payload))}
+                                                      {:columns [[:id :tenant_id]]})
+                                                     first)]
+      (mulog/log ::lifecycle-event :event-type event-type :base-url (:baseUrl lifecycle-payload) :local-time (java.time.LocalDateTime/now))
+      (case event-type
+        "installed" (installed lifecycle-payload tenant_id system)
+        "enabled" (enabled lifecycle-payload tenant_id system)
+        "uninstalled" (uninstalled lifecycle-payload tenant_id system)))))
+
+
