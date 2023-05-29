@@ -1,27 +1,9 @@
-(ns jcpsantiago.arqivist.api.confluence.handlers)
-
-;; FIXME: should be part of the configuration/system?
-(defn content-properties-ks
-  "
-  List of content properties we want to save in the Confluence page's storage.
-  These can be thought of as key-value storage, and act as a our database.
-  "
-  []
-  [:slack_thread_ts
-   :slack_thread_creator
-   :slack_thread_n_messages
-   :slack_thread_last_message_ts
-   :slack_channel_id])
-
-(defn content-properties-extraction
-  "
-  Takes a keyword and returns a map of content properties
-  following Atlassian's format.
-  "
-  [k]
-  {:objectName (name k)
-   :alias (str "arqivist_" (name k))
-   :type "string"})
+(ns jcpsantiago.arqivist.api.confluence.handlers
+  (:require
+   [com.brunobonacci.mulog :as mulog]
+   [donut.system :as donut]
+   [jcpsantiago.arqivist.api.confluence.utils :as utils]
+   [next.jdbc.sql :as sql]))
 
 (defn app-descriptor-json
   "
@@ -40,7 +22,7 @@
     :description "Create Confluence pages from Slack conversations."
     :baseUrl (System/getenv "ARQIVIST_BASE_URL")
     :enableLicensing true
-    :vendor {:name (System/getenv "ARQIVIST_VENDOR_NAME") 
+    :vendor {:name (System/getenv "ARQIVIST_VENDOR_NAME")
              :url (System/getenv "ARQIVIST_VENDOR_URL")}
     :authentication {:type "jwt"}
     :lifecycle {:installed "/confluence/installed"
@@ -59,7 +41,7 @@
        :key "theArqivistMetadata"
        ;; this one must be snake_case... this is not documented, I just tried and failed a few times
        :keyConfigurations [{:propertyKey "the_arqivist_props"
-                            :extractions (mapv content-properties-extraction (content-properties-ks))}]}]}}})
+                            :extractions (mapv utils/content-properties-extraction (utils/content-properties-ks))}]}]}}})
 
 (defn installed
   "
@@ -74,14 +56,49 @@
   "
   [system]
   (fn [request]
-    ;; FIXME: Do something with this to validate the incoming request
-    ;; https://developer.atlassian.com/cloud/jira/platform/connect-app-descriptor/#lifecycle
-    (future (println "Ready to do some work!"))
-    {:status 200 :body "OK"}))
+    (let [db-connection (:db-connection system)
+          lifecycle-payload (:body-params request)
+          {:keys [key clientKey accountId sharedSecret baseUrl displayUrl productType
+                  description serviceEntitlementNumber oauthClientId]} lifecycle-payload
+          url-short (utils/base-url-short baseUrl)
+          {:keys [:atlassian_tenants/tenant_id]} (-> (sql/find-by-keys
+                                                      db-connection
+                                                      :atlassian_tenants
+                                                      {:base_url_short url-short}
+                                                      {:columns [[:id :tenant_id]]})
+                                                     first)
+          data-to-insert {:key key
+                          :client_key clientKey
+                          :tenant_name (utils/tenant-name baseUrl)
+                          :account_id accountId
+                          :shared_secret sharedSecret
+                          :base_url baseUrl
+                          :base_url_short url-short
+                          :display_url displayUrl
+                          :product_type productType
+                          :description description
+                          :service_entitlement_number serviceEntitlementNumber
+                          :oauth_client_id oauthClientId}]
+      (mulog/log ::atlassian-installed :base-url-short url-short)
+      (if (nil? tenant_id)
+        (let [db-insert-fn! (partial sql/insert! db-connection :atlassian_tenants)]
+          (mulog/log ::inserting-new-atlassian-tenant :base-url baseUrl)
+          (-> data-to-insert
+              (db-insert-fn! {:return-keys true})))
+        (do
+          (mulog/log ::updating-existing-atlassian-tenant :base-url baseUrl)
+          (sql/update! db-connection :atlassian_tenants data-to-insert {:id tenant_id})))
+      {:status 200 :body "OK"})))
 
 (defn enabled
-  [_]
-  {:status 200 :body "OK"})
+  "
+  Ring handler for the 'enabled' event.
+  Not used at the moment.
+  "
+  [system]
+  (let [descriptor-key (get-in system [:env :atlassian :descriptor-key])]
+    (fn [request]
+      {:status 200 :body "OK"})))
 
 (defn uninstalled
   "
@@ -94,4 +111,4 @@
   "
   [system]
   (fn [uninstalled-payload]
-  {:status 200 :body "OK"}))
+    {:status 200 :body "OK"}))
