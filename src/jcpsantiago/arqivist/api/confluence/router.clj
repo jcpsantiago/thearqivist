@@ -35,7 +35,7 @@
       :description "Webhook for the `install` event<br>
                     Triggered in various events, but the most important is the initial app installation to a site.<br>
                     A new `sharedSecret` is created for each installation event."
-      :parameters {:body :jcpsantiago.arqivist.api.confluence.specs/installed}
+      :parameters {:body :jcpsantiago.arqivist.api.confluence.specs/lifecycle}
       :handler (handlers/installed system)}}]
 
    ["/enabled"
@@ -44,12 +44,14 @@
       :description "Webhook for the `enabled` event.<br>
                     App is enabled and users can start using the app.<br>
                     Triggered after a successful app installation or upgrade. This event will not be triggered for any other type of installed lifecycle events."
+      :parameters {:body :jcpsantiago.arqivist.api.confluence.specs/lifecycle}
       :handler handlers/enabled}}]
 
    ["/uninstalled"
     {:post
      {:summary "Webhook for the 'uninstall' event"
       :description "Webhook for the `uninstall` event when a user uninstalls the app from a site."
+      :parameters {:body :jcpsantiago.arqivist.api.confluence.specs/lifecycle}
       :handler handlers/uninstalled}}]
 
    ["/get-started"
