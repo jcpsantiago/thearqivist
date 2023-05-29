@@ -1,7 +1,8 @@
 (ns jcpsantiago.arqivist.api.confluence.router
   "Reitit routes for interacting with Confluence."
   (:require
-    [jcpsantiago.arqivist.api.confluence.handlers :as handlers]))
+    [jcpsantiago.arqivist.api.confluence.handlers :as handlers]
+    [jcpsantiago.arqivist.api.confluence.specs :as specs]))
 
 (defn routes
   "Routes used by Confluence:
@@ -13,7 +14,7 @@
      * uninstalled
 
    * get-started"
-  [_]
+  [system]
   ["/confluence"
    {:swagger {:tags ["Confluence"]
               :externalDocs
@@ -26,13 +27,16 @@
       :description ""
       :handler handlers/app-descriptor-json}}]
 
+   ;; FIXME: These routes need different kind of validation than the non-lifecycle routes
+   ;; https://developer.atlassian.com/cloud/confluence/security-for-connect-apps/#validating-installation-lifecycle-requests
    ["/installed"
     {:post
      {:summary "Webhook for the 'install' event"
       :description "Webhook for the `install` event<br>
                     Triggered in various events, but the most important is the initial app installation to a site.<br>
                     A new `sharedSecret` is created for each installation event."
-      :handler handlers/installed}}]
+      :parameters {:body :jcpsantiago.arqivist.api.confluence.specs/installed}
+      :handler (handlers/installed system)}}]
 
    ["/enabled"
     {:post
