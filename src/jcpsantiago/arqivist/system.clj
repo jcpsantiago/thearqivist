@@ -88,7 +88,8 @@
            ;; these components and config are passed on to the running instance
            :config {:system {:db-connection (donut/ref [:db :db-connection])
                              :cache (donut/ref [:cache :cache])
-                             :atlassian-env (donut/ref [:env :atlassian])}
+                             :atlassian-env (donut/ref [:env :atlassian])
+                             :slack-env (donut/ref [:env :slack])}
                     :options {:port (donut/ref [:env :port])
                               :join? false}}})
 
