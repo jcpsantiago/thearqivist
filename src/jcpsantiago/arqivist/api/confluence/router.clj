@@ -1,7 +1,8 @@
 (ns jcpsantiago.arqivist.api.confluence.router
   "Reitit routes for interacting with Confluence."
   (:require
-   [jcpsantiago.arqivist.api.confluence.handlers :as handlers]))
+   [jcpsantiago.arqivist.api.confluence.handlers :as handlers]
+   [jcpsantiago.arqivist.api.confluence.specs :as specs]))
 
 (defn routes
   "Routes used by Confluence:
