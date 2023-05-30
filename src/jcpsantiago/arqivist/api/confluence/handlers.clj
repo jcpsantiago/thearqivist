@@ -17,6 +17,7 @@
   [system]
   (fn [_]
     (let [env (get-in system [:atlassian-env])]
+      (mulog/log ::serving-descriptor-json :local-time (java.time.LocalDateTime/now))
       {:status 200
        :body
        {:key (:descriptor-key env)
@@ -73,12 +74,16 @@
                         :description description
                         :service_entitlement_number serviceEntitlementNumber
                         :oauth_client_id oauthClientId}]
-    (mulog/log ::atlassian-installed :base-url-short url-short)
+
+    (mulog/log ::atlassian-installed :base-url baseUrl :local-time (java.time.LocalDateTime/now))
+
     (if (nil? tenant_id)
-      (let [db-insert-fn! (partial sql/insert! db-connection :atlassian_tenants)]
+
+      (do
         (mulog/log ::inserting-new-atlassian-tenant :base-url baseUrl)
-        (-> data-to-insert
-            (db-insert-fn! {:return-keys true})))
+        (sql/insert! db-connection :atlassian_tenants data-to-insert {:return-keys true})
+        {:status 200 :body "OK"})
+
       (do
         (mulog/log ::updating-existing-atlassian-tenant :base-url baseUrl)
         (sql/update! db-connection :atlassian_tenants data-to-insert {:id tenant_id})
