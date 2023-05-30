@@ -109,7 +109,14 @@
                       :vendor-url (or (System/getenv "ARQIVIST_VENDOR_URL") "https://burstingburrito.com")
                       :base-url (or (System/getenv "ARQIVIST_BASE_URL") (ngrok-tunnel-url))
                       :descriptor-key (or (System/getenv "ARQIVIST_ATLASSIAN_DESCRIPTOR_KEY") "thearqivist-dev")}
+
+          :slack {:client-id (System/getenv "ARQIVIST_SLACK_CLIENT_ID")
+                  :client-secret (System/getenv "ARQIVIST_SLACK_CLIENT_SECRET")
+                  :signing-secret (System/getenv "ARQIVIST_SLACK_SIGNING_SECRET")
+                  :share-url (System/getenv "ARQIVIST_SLACK_SHARE_URL")}
+          
           :port (parse-long (or (System/getenv "ARQIVIST_PORT") "8989"))
+
           :datasource-options {;; NOTE: No idea what each of these actually do, should learn :D
                                :maximum-pool-size 5
                                :minimum-idle 2
