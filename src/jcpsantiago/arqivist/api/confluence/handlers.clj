@@ -1,4 +1,10 @@
 (ns jcpsantiago.arqivist.api.confluence.handlers
+  "
+  Handlers for interacting with Confluence.
+
+  * descriptor.json — serves the descriptor file needed to start app installation
+  * lifecycle endpoints used for the 'installed', 'enabled' and 'uninstalled' events
+  "
   (:require
    [com.brunobonacci.mulog :as mulog]
    [org.httpkit.client :as httpkit]
