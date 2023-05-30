@@ -1,7 +1,7 @@
 (ns jcpsantiago.arqivist.api.slack.specs
   "
-  Specs for Slack data, including incoming requests, db
-  representations and internal maps.
+  Specs for Slack data, including incoming requests,
+  db representations and internal maps.
   "
   (:require [clojure.spec.alpha :as spec]))
 
@@ -22,6 +22,9 @@
   (spec/keys
     :req-un [::id]
     :opt-un [::scope ::access_token ::token_type]))
+
+;; OAuth redirect
+(spec/def ::code string?)
 
 ;; Access token request
 (spec/def ::access-token-request
