@@ -7,6 +7,10 @@
   <i>Hard at work archiving your messages.</i>
 </p>
 
+⚠️ This repo has unstable code, DO NOT RELY ON IT.
+The version available at the [Atlassian Marketplace](https://marketplace.atlassian.com/apps/1227973)
+uses a private version of the code, and is stable.
+
 ## Saving Slack messages
 
 The Arqivist is a Slack bot which you can summon to create a Confluence page with the contents of a message thread, or a channel.
