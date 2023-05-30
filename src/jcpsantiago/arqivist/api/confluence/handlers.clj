@@ -16,11 +16,11 @@
    "
   [system]
   (fn [_]
-    (let [env (:env system)]
+    (let [env (get-in system [:atlassian-env])]
       {:status 200
        :body
        {:key (:descriptor-key env)
-        :name "The Arqivist — Slack conversations become Confluence pages"
+        :name "The Arqivist - Slack conversations become Confluence pages"
         :description "Create Confluence pages from Slack conversations."
         :baseUrl (:base-url env)
         :enableLicensing true

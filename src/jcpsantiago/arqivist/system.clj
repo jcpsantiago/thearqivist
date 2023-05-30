@@ -87,8 +87,8 @@
 
            ;; these components and config are passed on to the running instance
            :config {:system {:db-connection (donut/ref [:db :db-connection])
-                             :cache (donut/ref [:cache :cache])}
-                    :atlassian-env (donut/ref [:env :atlassian])
+                             :cache (donut/ref [:cache :cache])
+                             :atlassian-env (donut/ref [:env :atlassian])}
                     :options {:port (donut/ref [:env :port])
                               :join? false}}})
 
@@ -108,7 +108,7 @@
     :env {:atlassian {:vendor-name (or (System/getenv "ARQIVIST_VENDOR_NAME") "burstingburrito")
                       :vendor-url (or (System/getenv "ARQIVIST_VENDOR_URL") "https://burstingburrito.com")
                       :base-url (or (System/getenv "ARQIVIST_BASE_URL") (ngrok-tunnel-url))
-                      :descriptor-key (or (System/getenv "ARQIVIST_ATLASSIAN_DESCRIPTOR_KEY") "thearqivist")}
+                      :descriptor-key (or (System/getenv "ARQIVIST_ATLASSIAN_DESCRIPTOR_KEY") "thearqivist-dev")}
           :port (parse-long (or (System/getenv "ARQIVIST_PORT") "8989"))
           :datasource-options {;; NOTE: No idea what each of these actually do, should learn :D
                                :maximum-pool-size 5
@@ -138,4 +138,5 @@
   (:db-connection system)
   (get-in system [::donut/instances])
   (def started-system (donut/start system))
+  (clojure.pprint/pprint started-system)
   (get-in started-system [::donut/instances :db :db-connection]))
