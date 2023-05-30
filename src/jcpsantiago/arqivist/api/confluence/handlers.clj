@@ -20,28 +20,28 @@
       {:status 200
        :body
        {:key (:descriptor-key env)
-        :name "The Arqivist - Slack threads become Confluence pages"
+        :name "The Arqivist — Slack conversations become Confluence pages"
         :description "Create Confluence pages from Slack conversations."
         :baseUrl (:base-url env)
         :enableLicensing true
         :vendor {:name (:vendor-name env)
                  :url (:vendor-url env)}
         :authentication {:type "jwt"}
-        :lifecycle {:installed "/confluence/installed"
-                    :enabled "/confluence/enabled"
-                    :uninstalled "/confluence/uninstalled"}
+        :lifecycle {:installed "/api/v1/confluence/installed"
+                    :enabled "/api/v1/confluence/enabled"
+                    :uninstalled "/api/v1/confluence/uninstalled"}
         :scopes ["READ" "WRITE"]
         :modules
         {:postInstallPage
-         {:url "/confluence/get-started"
+         {:url "/api/v1/confluence/get-started"
           :name {:value "Get started with The Arqivist"
                  :i18n "getstartedwiththearqivist.name"}
           :key "get-started"}
          :confluenceContentProperties
          [{:name {:value "Arqivist Metadata"}
-       ;; This key must be camelcase or kebab-case, *never* snake_case
+           ;; This key must be camelcase or kebab-case, *never* snake_case
            :key "theArqivistMetadata"
-       ;; this one must be snake_case... this is not documented, I just tried and failed a few times
+           ;; this one must be snake_case... this is not documented, I just tried and failed a few times
            :keyConfigurations [{:propertyKey "the_arqivist_props"
                                 :extractions (mapv utils/content-properties-extraction (utils/content-properties-ks))}]}]}}})))
 
@@ -94,7 +94,7 @@
   (let [res (utils/create-space! (get-in system [:env :atlassian :descriptor-key]) lifecycle-payload)]
     (if (= (:status res) 200)
       {:status 200 :body "OK"}
-          ;; TODO: something more useful here? This endpint is not consumed by anyone though, only the Atlassian bots
+      ;; TODO: something more useful here? This endpint is not consumed by anyone though, only the Atlassian bots
       {:status 500 :body "ERROR"})))
 
 (defn uninstalled
