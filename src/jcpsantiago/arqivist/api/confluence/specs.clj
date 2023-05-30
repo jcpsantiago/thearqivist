@@ -12,7 +12,13 @@
 (spec/def ::serviceEntitlementNumber (spec/nilable string?))
 (spec/def ::eventType string?)
 
+;; NOTE: this does not follow the expected format, as usual in Atlassian-land
+;; https://developer.atlassian.com/cloud/confluence/connect-app-descriptor/#lifecycle-http-request-payload
+;; thus the additional specs here for the different events
 (spec/def ::lifecycle
   (spec/keys
-   :req-un [::key ::clientKey ::sharedSecret ::baseUrl ::serviceEntitlementNumber ::eventType]
-   :opt-un [::displayUrl ::productType ::description]))
+   :req-un [::key ::clientKey ::baseUrl ::eventType]
+   :opt-un [::displayUrl ::productType ::description ::serviceEntitlementNumber]))
+
+(spec/def ::installed
+  (spec/merge ::lifecycle (spec/keys :req-un [::sharedSecret])))

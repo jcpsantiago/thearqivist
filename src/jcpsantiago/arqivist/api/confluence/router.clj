@@ -35,7 +35,7 @@
       :description "Webhook for the `install` event<br>
                     Triggered in various events, but the most important is the initial app installation to a site.<br>
                     A new `sharedSecret` is created for each installation event."
-      :parameters {:body :jcpsantiago.arqivist.api.confluence.specs/lifecycle}
+      :parameters {:body :jcpsantiago.arqivist.api.confluence.specs/installed}
       :handler (handlers/lifecycle system)}}]
 
    ["/enabled"
