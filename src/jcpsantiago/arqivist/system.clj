@@ -5,9 +5,25 @@
    [com.brunobonacci.mulog :as mulog]
    [donut.system :as donut]
    [hikari-cp.core :as hikari]
-   [org.httpkit.server :as http]
+   [org.httpkit.client :as http-client]
+   [org.httpkit.server :as http-server]
    [jcpsantiago.arqivist.router :as router]
+   [jsonista.core :as jsonista]
    [migratus.core :as migratus]))
+
+;; TODO: move into system utils namespace?
+(defn ngrok-tunnel-url
+  "
+  Helper function to grab the public url of a running ngrok tunnel.
+  There's a more advanced library https://github.com/chpill/ngrok for this.
+  "
+  []
+  (let [res @(http-client/get "http://localhost:4040/api/tunnels")]
+    (-> (:body res)
+        (jsonista/read-value jsonista/keyword-keys-object-mapper)
+        :tunnels
+        first
+        :public_url)))
 
 (def event-logger
   "mulog log publisher component"
@@ -61,7 +77,7 @@
                     (mulog/log ::starting-server
                                :local-time (java.time.LocalDateTime/now)
                                :port (:port options))
-                    (http/run-server (router/app system) options))
+                    (http-server/run-server (router/app system) options))
 
            :stop (fn stop-server
                    [{::donut/keys [instance]}]
@@ -69,10 +85,10 @@
                    (instance :timeout 100)
                    (mulog/log ::server-stopped :local-time (java.time.LocalDateTime/now)))
 
-           ;; TODO: review this
+           ;; these components and config are passed on to the running instance
            :config {:system {:db-connection (donut/ref [:db :db-connection])
                              :cache (donut/ref [:cache :cache])}
-                             :env (donut/ref [:env])
+                    :atlassian-env (donut/ref [:env :atlassian])
                     :options {:port (donut/ref [:env :port])
                               :join? false}}})
 
@@ -91,10 +107,9 @@
    {;; Environmental variables
     :env {:atlassian {:vendor-name (or (System/getenv "ARQIVIST_VENDOR_NAME") "burstingburrito")
                       :vendor-url (or (System/getenv "ARQIVIST_VENDOR_URL") "https://burstingburrito.com")
-                      :base-url (or (System/getenv "ARQIVIST_BASE_URL") "https://burstingburrito.atlassian.net")
+                      :base-url (or (System/getenv "ARQIVIST_BASE_URL") (ngrok-tunnel-url))
                       :descriptor-key (or (System/getenv "ARQIVIST_ATLASSIAN_DESCRIPTOR_KEY") "thearqivist")}
-          :port (parse-long (or (System/getenv "ARQIVIST_PORT")
-                                "8989"))
+          :port (parse-long (or (System/getenv "ARQIVIST_PORT") "8989"))
           :datasource-options {;; NOTE: No idea what each of these actually do, should learn :D
                                :maximum-pool-size 5
                                :minimum-idle 2
@@ -119,8 +134,8 @@
 
 (comment
   (prn system)
-  (get-in system [::donut/defs :env :atlassian :descriptor-key]))
+  (get-in system [::donut/defs :env :atlassian :descriptor-key])
   (:db-connection system)
   (get-in system [::donut/instances])
   (def started-system (donut/start system))
-  (get-in started-system [::donut/instances :db :db-connection])
+  (get-in started-system [::donut/instances :db :db-connection]))
