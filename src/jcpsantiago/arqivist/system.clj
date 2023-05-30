@@ -131,12 +131,3 @@
 
     ;; HTTP server components
     :http {:server http-server}}})
-
-(comment
-  (prn system)
-  (get-in system [::donut/defs :env :atlassian :descriptor-key])
-  (:db-connection system)
-  (get-in system [::donut/instances])
-  (def started-system (donut/start system))
-  (clojure.pprint/pprint started-system)
-  (get-in started-system [::donut/instances :db :db-connection]))
