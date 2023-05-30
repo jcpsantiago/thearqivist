@@ -113,5 +113,5 @@
                     :atlassian_tenant_id tenant_id}
                    {:return-keys true})
 
-      ;;TODO: Add success page here
+      ;; TODO: Add success page here
       {:status 200 :body "YEY! You're connected!"})))

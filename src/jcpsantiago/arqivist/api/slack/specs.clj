@@ -15,13 +15,13 @@
 
 (spec/def ::team
   (spec/keys
-    :req-un [::id]
-    :opt-un [::name]))
+   :req-un [::id]
+   :opt-un [::name]))
 
 (spec/def ::authed_user
   (spec/keys
-    :req-un [::id]
-    :opt-un [::scope ::access_token ::token_type]))
+   :req-un [::id]
+   :opt-un [::scope ::access_token ::token_type]))
 
 ;; OAuth redirect
 (spec/def ::code string?)
@@ -29,7 +29,7 @@
 ;; Access token request
 (spec/def ::access-token-request
   (spec/keys
-    :req-un [::access_token ::scope ::bot_user_id ::app_id ::team ::authed_user]))
+   :req-un [::access_token ::scope ::bot_user_id ::app_id ::team ::authed_user]))
 
 ;; Slash command request
 ;; Slash commands are sent via POST requests with Content-type application/x-www-form-urlencoded.
