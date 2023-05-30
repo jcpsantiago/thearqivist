@@ -53,9 +53,6 @@
   or by manually uploading/pointing to the descriptor.json file e.g. private installations.
 
   It creates a new entry in the atlassian_tenants table with the keys needed for the app to work.
-
-  Takes a donut.system as input to return a function ready with a db connection which takes
-  a ring request as input.
   "
   [lifecycle-payload tenant_id system]
   (let [db-connection (:db-connection system)
@@ -91,12 +88,14 @@
 
 (defn enabled
   "
-  Ring handler for the 'enabled' event.
-  Not used at the moment.
+  Ring handler for the 'enabled' event issued after 'installed' is successful.
+  It creates a space in the user's Confluence instance, used later to store all archived conversations.
   "
   [lifecycle-payload _ system]
   (mulog/log ::atlassian-enabled :base-url (:baseUrl lifecycle-payload) :local-time (java.time.LocalDateTime/now))
+
   (let [res (utils/create-space! (get-in system [:env :atlassian :descriptor-key]) lifecycle-payload)]
+
     (if (= (:status res) 200)
       {:status 200 :body "OK"}
       ;; TODO: something more useful here? This endpint is not consumed by anyone though, only the Atlassian bots
@@ -105,11 +104,8 @@
 (defn uninstalled
   "
   Ring handler for the 'uninstalled' Atlassian lifecycle event:
-   * deletes all rows in db related to the tenant originating the request
-   * uninstalls the app from the Slack workspace connected to the tenant
-
-  Takes a donut.system object as input, returns a function ready with a database connection,
-  and taking a ring request as input.
+    * deletes all rows in db related to the tenant originating the request
+    * uninstalls the app from the Slack workspace connected to the tenant
   "
   [lifecycle-payload tenant_id system]
   (let [db-connection (:db-connection system)
@@ -120,6 +116,7 @@
                 :slack_teams/external_team_id]}
         (-> (sql/find-by-keys db-connection :slack_teams {:atlassian_tenant_id tenant_id})
             first)]
+
     ;; drop the row corresponding to the current tenant, plus the row in  'slack_teams'
     ;; TODO: wrap in try/catch
     (mulog/log ::uninstalling-app
@@ -127,7 +124,9 @@
                :slack-team-id external_team_id
                :slack-team-name team_name
                :local-time (java.time.LocalDateTime/now))
+
     (sql/delete! db-connection :atlassian_tenants {:id tenant_id})
+
     ;; TODO: wrap in try/catch
     @(httpkit/get
       (str "https://slack.com/api/apps.uninstall?"
@@ -135,11 +134,12 @@
            "&client_secret=" (get-in system [:env :slack :arqivist-slack-client-secret])
            {:headers {"Content-Type" "application/json; charset=utf-8"}
             :oauth-token access_token}))
+
     {:status 200 :body "OK"}))
 
 (defn lifecycle
   "
-  Handler for the Atlassian lifecycle events.
+  Handler for the Atlassian lifecycle events, dispatches based on the 'eventType' key of the event payload.
   "
   [system]
   (fn [request]
@@ -153,6 +153,7 @@
                                                       {:columns [[:id :tenant_id]]})
                                                      first)]
       (mulog/log ::lifecycle-event :event-type event-type :base-url (:baseUrl lifecycle-payload) :local-time (java.time.LocalDateTime/now))
+
       (case event-type
         "installed" (installed lifecycle-payload tenant_id system)
         "enabled" (enabled lifecycle-payload tenant_id system)
