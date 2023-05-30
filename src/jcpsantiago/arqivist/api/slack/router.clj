@@ -22,7 +22,7 @@
       ;; TODO: add the rest of the specs, not working yet
       ;; :parameters {:body :jcpsantiago.arqivist.api.slack.spec/shortcut-body}
       :responses {200 {:body string?}}
-      :handler handler/message-shortcut}}]
+      :handler handlers/message-shortcut}}]
 
    ;; TODO: Add example from https://api.slack.com/interactivity/slash-commands#app_command_handling
    ["/slash"
@@ -35,7 +35,7 @@
       ;; TODO: add the rest of the specs, not working yet
       ;; :parameters {:form :jcpsantiago.arqivist.api.slack.spec/slash-form-params}
       :responses {200 {:body string?}}
-      :handler handler/slash-command}}]
+      :handler handlers/slash-command}}]
 
    ["/redirect"
     {:swagger {:externalDocs
