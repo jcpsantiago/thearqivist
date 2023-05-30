@@ -1,6 +1,6 @@
 (ns jcpsantiago.arqivist.api.confluence.specs
   (:require
-    [clojure.spec.alpha :as spec]))
+   [clojure.spec.alpha :as spec]))
 
 (spec/def ::key string?)
 (spec/def ::clientKey string?)
@@ -14,5 +14,5 @@
 
 (spec/def ::lifecycle
   (spec/keys
-    :req-un [::key ::clientKey ::sharedSecret ::baseUrl ::serviceEntitlementNumber]
-    :opt-un [::displayUrl ::productType ::description ::eventType]))
+   :req-un [::key ::clientKey ::sharedSecret ::baseUrl ::serviceEntitlementNumber ::eventType]
+   :opt-un [::displayUrl ::productType ::description]))
