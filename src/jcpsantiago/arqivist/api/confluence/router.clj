@@ -1,13 +1,13 @@
 (ns jcpsantiago.arqivist.api.confluence.router
   "Reitit routes for interacting with Confluence."
   (:require
-    [jcpsantiago.arqivist.api.confluence.handlers :as handlers]))
+   [jcpsantiago.arqivist.api.confluence.handlers :as handlers]))
 
 (defn routes
   "Routes used by Confluence:
    * descriptor.json
 
-   -- Lifecycle endpoints
+   * Lifecycle endpoints
      * installed
      * enabled
      * uninstalled
@@ -24,7 +24,7 @@
     {:get
      {:summary "Serves the Application Descriptor file"
       :description ""
-      :handler handlers/app-descriptor-json}}]
+      :handler (handlers/app-descriptor-json system)}}]
 
    ;; FIXME: These routes need different kind of validation than the non-lifecycle routes
    ;; https://developer.atlassian.com/cloud/confluence/security-for-connect-apps/#validating-installation-lifecycle-requests

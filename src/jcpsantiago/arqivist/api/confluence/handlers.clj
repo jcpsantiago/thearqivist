@@ -14,34 +14,36 @@
    See official docs in https://developer.atlassian.com/cloud/confluence/connect-app-descriptor/,
    and comments below for unofficial information on specific keys.
    "
-  [_]
-  {:status 200
-   :body
-   {:key (System/getenv "ARQIVIST_ATLASSIAN_DESCRITPOR_KEY")
-    :name "The Arqivist - Slack threads become Confluence pages"
-    :description "Create Confluence pages from Slack conversations."
-    :baseUrl (System/getenv "ARQIVIST_BASE_URL")
-    :enableLicensing true
-    :vendor {:name (System/getenv "ARQIVIST_VENDOR_NAME")
-             :url (System/getenv "ARQIVIST_VENDOR_URL")}
-    :authentication {:type "jwt"}
-    :lifecycle {:installed "/confluence/installed"
-                :enabled "/confluence/enabled"
-                :uninstalled "/confluence/uninstalled"}
-    :scopes ["READ" "WRITE"]
-    :modules
-    {:postInstallPage
-     {:url "/confluence/get-started"
-      :name {:value "Get started with The Arqivist"
-             :i18n "getstartedwiththearqivist.name"}
-      :key "get-started"}
-     :confluenceContentProperties
-     [{:name {:value "Arqivist Metadata"}
+  [system]
+  (fn [_]
+    (let [env (:env system)]
+      {:status 200
+       :body
+       {:key (:descriptor-key env)
+        :name "The Arqivist - Slack threads become Confluence pages"
+        :description "Create Confluence pages from Slack conversations."
+        :baseUrl (:base-url env)
+        :enableLicensing true
+        :vendor {:name (:vendor-name env)
+                 :url (:vendor-url env)}
+        :authentication {:type "jwt"}
+        :lifecycle {:installed "/confluence/installed"
+                    :enabled "/confluence/enabled"
+                    :uninstalled "/confluence/uninstalled"}
+        :scopes ["READ" "WRITE"]
+        :modules
+        {:postInstallPage
+         {:url "/confluence/get-started"
+          :name {:value "Get started with The Arqivist"
+                 :i18n "getstartedwiththearqivist.name"}
+          :key "get-started"}
+         :confluenceContentProperties
+         [{:name {:value "Arqivist Metadata"}
        ;; This key must be camelcase or kebab-case, *never* snake_case
-       :key "theArqivistMetadata"
+           :key "theArqivistMetadata"
        ;; this one must be snake_case... this is not documented, I just tried and failed a few times
-       :keyConfigurations [{:propertyKey "the_arqivist_props"
-                            :extractions (mapv utils/content-properties-extraction (utils/content-properties-ks))}]}]}}})
+           :keyConfigurations [{:propertyKey "the_arqivist_props"
+                                :extractions (mapv utils/content-properties-extraction (utils/content-properties-ks))}]}]}}})))
 
 (defn installed
   "

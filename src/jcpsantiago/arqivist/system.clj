@@ -89,8 +89,10 @@
 
   {::donut/defs
    {;; Environmental variables
-    :env {:atlassian {:descriptor-key (or (System/getenv "ARQIVIST_ATLASSIAN_DESCRIPTOR_KEY")
-                                          "thearqivist")}
+    :env {:atlassian {:vendor-name (or (System/getenv "ARQIVIST_VENDOR_NAME") "burstingburrito")
+                      :vendor-url (or (System/getenv "ARQIVIST_VENDOR_URL") "https://burstingburrito.com")
+                      :base-url (or (System/getenv "ARQIVIST_BASE_URL") "https://burstingburrito.atlassian.net")
+                      :descriptor-key (or (System/getenv "ARQIVIST_ATLASSIAN_DESCRIPTOR_KEY") "thearqivist")}
           :port (parse-long (or (System/getenv "ARQIVIST_PORT")
                                 "8989"))
           :datasource-options {;; NOTE: No idea what each of these actually do, should learn :D
@@ -114,3 +116,11 @@
 
     ;; HTTP server components
     :http {:server http-server}}})
+
+(comment
+  (prn system)
+  (get-in system [::donut/defs :env :atlassian :descriptor-key]))
+  (:db-connection system)
+  (get-in system [::donut/instances])
+  (def started-system (donut/start system))
+  (get-in started-system [::donut/instances :db :db-connection])
