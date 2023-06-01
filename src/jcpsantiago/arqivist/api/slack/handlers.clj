@@ -81,12 +81,7 @@
     (mulog/log ::oauth-redirect :local-time (java.time.LocalDateTime/now))
     (let [db-connection (:db-connection system)
           slack-env (:slack-env system)
-          {:keys [code state]} (keywordize-keys (:query-params request))]
-
-      (if (empty? state)
-        (do
-          (mulog/log ::inserting-slack-team :error "State parameter missing")
-          (redirect "https://arqivist.app/"))
+          {:keys [code state]} (get-in request [:parameters :query])]
 
         (let [{:keys [:atlassian_tenants/tenant_id]} (-> (sql/find-by-keys
                                                           db-connection
