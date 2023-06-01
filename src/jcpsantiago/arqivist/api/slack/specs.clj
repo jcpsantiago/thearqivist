@@ -27,7 +27,7 @@
 (spec/def ::code string?)
 (spec/def ::state (spec/nilable string?))
 
-(spec/def ::oath-redirect
+(spec/def ::oauth-redirect
   (spec/keys
     :req-un [::code ::state]))
 

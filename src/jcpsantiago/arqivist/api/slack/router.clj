@@ -44,7 +44,7 @@
      :get
      {:summary "OAuth2 redirect target"
       :description "This endpoint receives the data about the workspace, after a user successfully added the app to their account."
-      :parameters {:query-params ::specs/oauth-redirect}
+      :parameters {:query ::specs/oauth-redirect}
       :responses {200 {:body string?}
                   500 {:body string?}}
       :handler (handlers/oauth-redirect system)}}]])
