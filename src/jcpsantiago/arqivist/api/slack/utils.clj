@@ -20,6 +20,7 @@
 
     (mulog/log ::inserting-slack-team :team-id team_id :local-time (java.time.LocalDateTime/now))
 
+    ;; TODO: if the SQL error happens due to a duplication, show the good outcome page anyways
     (try
       (sql/insert! db-connection
                    :slack_teams
