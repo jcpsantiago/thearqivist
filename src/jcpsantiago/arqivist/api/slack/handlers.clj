@@ -4,11 +4,12 @@
    [clojure.spec.alpha :as spec]
    [com.brunobonacci.mulog :as mulog]
    [org.httpkit.client :as httpkit]
+   [jcpsantiago.arqivist.api.slack.pages :as pages]
    [jcpsantiago.arqivist.api.slack.specs :as specs]
    [jcpsantiago.arqivist.api.slack.utils :as utils]
    [jsonista.core :as jsonista]
    [next.jdbc.sql :as sql]
-   [ring.util.response :refer [redirect]]))
+   [ring.util.response :refer [response content-type]]))
 
 ;; TODO: move to utils/slack-api namespace
 (defn oauth-access!
@@ -107,14 +108,14 @@
                      :base-url state
                      :error "No tenant found in the db for the given base-url"
                      :local-time (java.time.LocalDateTime/now))
-          (redirect "https://google.com"))
+          (-> pages/sad-slack-outcome response (content-type "text/html")))
 
         (spec/invalid? (spec/conform ::specs/oauth-access token-response))
         (do
           (mulog/log ::inserting-slack-team
                      :error (spec/explain-data ::specs/oauth-access token-response)
                      :local-time (java.time.LocalDateTime/now))
-          (redirect "https://arqivist.app"))
+          (-> pages/sad-slack-outcome response (content-type "text/html")))
 
         (:ok token-response) (utils/insert-slack-team! token-response tenant_id db-connection)
 
@@ -123,4 +124,4 @@
                            :tenant-id tenant_id
                            :error (:error token-response)
                            :local-time (java.time.LocalDateTime/now))
-                (redirect "https://arqivist.app"))))))
+                (-> pages/sad-slack-outcome response (content-type "text/html")))))))
