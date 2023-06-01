@@ -1,6 +1,7 @@
 (ns jcpsantiago.arqivist.api.slack.handlers
   "Ring handlers and support functions for Slack requests."
   (:require
+   [clojure.walk :refer [keywordize-keys]]
    [com.brunobonacci.mulog :as mulog]
    [org.httpkit.client :as httpkit]
    [jsonista.core :as jsonista]
@@ -67,51 +68,60 @@
   {:status 200 :body "" :headers {}})
 
 ;; ------------------------------------------------------
-;; Handler for OAuth redirection
+;; Handler for OAuth redirection, installation in Slack
+;; TODO: Add success and error pages
 (defn oauth-redirect
   "
   Handler for the redirect step in the OAuth dance.
+  Inserts a Slack team's credentials into the database, linking it to an existing Atlassian tenant.
   "
   [system]
   (fn [request]
     (mulog/log ::oauth-redirect :local-time (java.time.LocalDateTime/now))
     (let [db-connection (:db-connection system)
           slack-env (:slack-env system)
-          {:keys [code state]} (:query-params request)
+          {:keys [code state]} (keywordize-keys (:query-params request))]
 
-          {:keys [:atlassian_tenants/tenant_id]} (-> (sql/find-by-keys
-                                                      db-connection
-                                                      :atlassian_tenants
-                                                      {:base_url_short state}
-                                                      {:columns [[:id :tenant_id]]})
-                                                     first)
+      (if (empty? state)
+        (do
+          (mulog/log ::inserting-slack-team :error "State parameter missing")
+          {:status 500 :body "Something went wrong!"})
 
-          token-response-promise (oauth-access!
-                                  {:form-params {:code code}
-                                   :basic-auth [(:client-id slack-env)
-                                                (:client-secret slack-env)]})
+        (let [{:keys [:atlassian_tenants/tenant_id]} (-> (sql/find-by-keys
+                                                          db-connection
+                                                          :atlassian_tenants
+                                                          {:base_url_short state}
+                                                          {:columns [[:id :tenant_id]]})
+                                                         first)
 
-          token-response (-> @token-response-promise
-                             :body
-                             (jsonista/read-value jsonista/keyword-keys-object-mapper))
+              token-response (-> @(oauth-access!
+                                   {:form-params {:code code}
+                                    :basic-auth [(:client-id slack-env)
+                                                 (:client-secret slack-env)]})
+                                 :body
+                                 (jsonista/read-value jsonista/keyword-keys-object-mapper))]
 
-          {:keys [team authed_user scope access_token bot_user_id app_id]} token-response
-          {team_id :id team_name :name} team]
+          (if (true? (:ok token-response))
+            (let [{:keys [team authed_user scope access_token bot_user_id app_id]} token-response
+                  {team_id :id team_name :name} team]
 
-      (mulog/log ::inserting-slack-team :team-id team_id :tenant-id tenant_id :local-time (java.time.LocalDateTime/now))
+              (mulog/log ::inserting-slack-team :team-id team_id :tenant-id tenant_id :local-time (java.time.LocalDateTime/now))
 
-      ;; TODO: try-catch etc
-      (sql/insert! db-connection
-                   :atlassian_tenants
-                   {:app_id app_id
-                    :external_team_id team_id
-                    :team_name team_name
-                    :registering_user (:id authed_user)
-                    :scopes scope
-                    :access_token access_token
-                    :bot_user_id bot_user_id
-                    :atlassian_tenant_id tenant_id}
-                   {:return-keys true})
+              ;; TODO: try-catch etc
+              (sql/insert! db-connection
+                           :slack_teams
+                           {:app_id app_id
+                            :external_team_id team_id
+                            :team_name team_name
+                            :registering_user (:id authed_user)
+                            :scopes scope
+                            :access_token access_token
+                            :bot_user_id bot_user_id
+                            :atlassian_tenant_id tenant_id}
+                           {:return-keys true})
 
-      ;; TODO: Add success page here
-      {:status 200 :body "YEY! You're connected!"})))
+              {:status 200 :body "YEY! You're connected!"})
+
+            (do
+              (mulog/log ::inserting-slack-team :tenant-id tenant_id :error (:error token-response) :local-time (java.time.LocalDateTime/now))
+              {:status 500 :body "Something went wrong!"})))))))
