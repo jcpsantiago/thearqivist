@@ -41,3 +41,14 @@
     ;; TODO add assets to the right place. Maybe these page could be served via CDN instead, making this useless
     ;; [:img {:src "/img/arqivist.jpg" :height "200"}]
     message]))
+
+(def good-slack-outcome
+  (slack-outcome
+   [:h1 "Installation successful!"]
+   [:p  "You can now close this tab and start using The Arqivist in your Slack app."]))
+
+(def sad-slack-outcome
+  (slack-outcome
+   [:h1 "Houston we have a problem!"]
+   [:p "We are having some issues installing The Arqivist. Our technicians were alerted, and will work ASAP at deploying a fix."]
+   [:p "Please try to install again later."]))
