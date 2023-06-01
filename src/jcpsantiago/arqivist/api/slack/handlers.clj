@@ -5,7 +5,8 @@
    [com.brunobonacci.mulog :as mulog]
    [org.httpkit.client :as httpkit]
    [jsonista.core :as jsonista]
-   [next.jdbc.sql :as sql]))
+   [next.jdbc.sql :as sql]
+   [ring.util.response :refer [redirect]]))
 
 ;; TODO: move to utils/slack-api namespace
 (defn oauth-access!
@@ -85,7 +86,7 @@
       (if (empty? state)
         (do
           (mulog/log ::inserting-slack-team :error "State parameter missing")
-          {:status 500 :body "Something went wrong!"})
+          (redirect "https://arqivist.app/"))
 
         (let [{:keys [:atlassian_tenants/tenant_id]} (-> (sql/find-by-keys
                                                           db-connection
@@ -120,8 +121,8 @@
                             :atlassian_tenant_id tenant_id}
                            {:return-keys true})
 
-              {:status 200 :body "YEY! You're connected!"})
+              (redirect "https://arqivist.app"))
 
             (do
               (mulog/log ::inserting-slack-team :tenant-id tenant_id :error (:error token-response) :local-time (java.time.LocalDateTime/now))
-              {:status 500 :body "Something went wrong!"})))))))
+              (redirect "https://arqivist.app"))))))))
