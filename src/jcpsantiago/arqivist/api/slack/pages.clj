@@ -38,5 +38,6 @@
             "Pricing " [:span "&#8599;"]]]
       [:li [:a {:target "_blank" :href "/terms"} "Terms"]]
       [:li [:a {:target "_blank" :href "/privacy"} "Privacy"]]]]
-    [:img {:src "/img/arqivist.jpg" :height "200"}]
+    ;; TODO add assets to the right place. Maybe these page could be served via CDN instead, making this useless
+    ;; [:img {:src "/img/arqivist.jpg" :height "200"}]
     message]))
