@@ -1,9 +1,10 @@
 (ns jcpsantiago.arqivist.api.slack.handlers
   "Ring handlers and support functions for Slack requests."
   (:require
-   [clojure.walk :refer [keywordize-keys]]
+   [clojure.spec.alpha :as spec]
    [com.brunobonacci.mulog :as mulog]
    [org.httpkit.client :as httpkit]
+   [jcpsantiago.arqivist.api.slack.specs :as specs]
    [jsonista.core :as jsonista]
    [next.jdbc.sql :as sql]
    [ring.util.response :refer [redirect]]))
@@ -71,6 +72,7 @@
 ;; ------------------------------------------------------
 ;; Handler for OAuth redirection, installation in Slack
 ;; TODO: Add success and error pages
+;; TODO: Add the root-trace id to the error page shown to the user in case of error (:mulog/root-trace (mulog/local-context))))
 (defn oauth-redirect
   "
   Handler for the redirect step in the OAuth dance.
@@ -97,27 +99,34 @@
                                  :body
                                  (jsonista/read-value jsonista/keyword-keys-object-mapper))]
 
-          (if (true? (:ok token-response))
-            (let [{:keys [team authed_user scope access_token bot_user_id app_id]} token-response
-                  {team_id :id team_name :name} team]
-
-              (mulog/log ::inserting-slack-team :team-id team_id :tenant-id tenant_id :local-time (java.time.LocalDateTime/now))
-
-              ;; TODO: try-catch etc
-              (sql/insert! db-connection
-                           :slack_teams
-                           {:app_id app_id
-                            :external_team_id team_id
-                            :team_name team_name
-                            :registering_user (:id authed_user)
-                            :scopes scope
-                            :access_token access_token
-                            :bot_user_id bot_user_id
-                            :atlassian_tenant_id tenant_id}
-                           {:return-keys true})
-
+          (if (spec/invalid? (spec/conform ::specs/oauth-access token-response))
+            (do
+              (mulog/log ::inserting-slack-team :error (spec/explain-data ::specs/oauth-access token-response) :local-time (java.time.LocalDateTime/now))
               (redirect "https://arqivist.app"))
 
-            (do
-              (mulog/log ::inserting-slack-team :tenant-id tenant_id :error (:error token-response) :local-time (java.time.LocalDateTime/now))
-              (redirect "https://arqivist.app"))))))))
+            (if (:ok token-response)
+              (let [{:keys [team authed_user scope access_token bot_user_id app_id]} token-response
+                    {team_id :id team_name :name} team]
+
+                (mulog/log ::inserting-slack-team :team-id team_id :tenant-id tenant_id :local-time (java.time.LocalDateTime/now))
+
+                (try
+                  (sql/insert! db-connection
+                               :slack_teams
+                               {:app_id app_id
+                                :external_team_id team_id
+                                :team_name team_name
+                                :registering_user (:id authed_user)
+                                :scopes scope
+                                :access_token access_token
+                                :bot_user_id bot_user_id
+                                :atlassian_tenant_id tenant_id}
+                               {:return-keys true})
+                  (catch Exception e (mulog/log ::inserting-slack-team :team-id team_id :tenant-id tenant_id :error (.getMessage e) :local-time (java.time.LocalDateTime/now)))
+                  (finally (redirect "https://arqivist.app")))
+
+                (redirect "https://arqivist.app"))
+
+              (do
+                (mulog/log ::inserting-slack-team :tenant-id tenant_id :error (:error token-response) :local-time (java.time.LocalDateTime/now))
+                (redirect "https://arqivist.app"))))))))
