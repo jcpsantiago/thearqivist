@@ -6,10 +6,13 @@
   * lifecycle endpoints used for the 'installed', 'enabled' and 'uninstalled' events
   "
   (:require
+   [clojure.spec.alpha :as spec]
    [com.brunobonacci.mulog :as mulog]
    [org.httpkit.client :as httpkit]
+   [jcpsantiago.arqivist.api.slack.specs :as slack-specs]
    [jcpsantiago.arqivist.api.confluence.utils :as utils]
-   [next.jdbc.sql :as sql]))
+   [next.jdbc.sql :as sql]
+   [ring.util.response :refer [response content-type]]))
 
 (defn app-descriptor-json
   "
@@ -24,33 +27,35 @@
   (fn [_]
     (let [env (get-in system [:atlassian-env])]
       (mulog/log ::serving-descriptor-json :local-time (java.time.LocalDateTime/now))
-      {:status 200
-       :body
-       {:key (:descriptor-key env)
-        :name "The Arqivist - Slack conversations become Confluence pages"
-        :description "Create Confluence pages from Slack conversations."
-        :baseUrl (:base-url env)
-        :enableLicensing true
-        :vendor {:name (:vendor-name env)
-                 :url (:vendor-url env)}
-        :authentication {:type "jwt"}
-        :lifecycle {:installed "/api/v1/confluence/installed"
-                    :enabled "/api/v1/confluence/enabled"
-                    :uninstalled "/api/v1/confluence/uninstalled"}
-        :scopes ["READ" "WRITE"]
-        :modules
-        {:postInstallPage
-         {:url "/api/v1/confluence/get-started"
-          :name {:value "Get started with The Arqivist"
-                 :i18n "getstartedwiththearqivist.name"}
-          :key "get-started"}
-         :confluenceContentProperties
-         [{:name {:value "Arqivist Metadata"}
+      (->
+       {:body
+        {:key (:descriptor-key env)
+         :name "The Arqivist - Slack conversations become Confluence pages"
+         :description "Create Confluence pages from Slack conversations."
+         :baseUrl (:base-url env)
+         :enableLicensing true
+         :vendor {:name (:vendor-name env)
+                  :url (:vendor-url env)}
+         :authentication {:type "jwt"}
+         :lifecycle {:installed "/api/v1/confluence/installed"
+                     :enabled "/api/v1/confluence/enabled"
+                     :uninstalled "/api/v1/confluence/uninstalled"}
+         :scopes ["READ" "WRITE"]
+         :modules
+         {:postInstallPage
+          {:url "/api/v1/confluence/get-started"
+           :name {:value "Get started with The Arqivist"
+                  :i18n "getstartedwiththearqivist.name"}
+           :key "get-started"}
+          :confluenceContentProperties
+          [{:name {:value "Arqivist Metadata"}
            ;; This key must be camelcase or kebab-case, *never* snake_case
-           :key "theArqivistMetadata"
+            :key "theArqivistMetadata"
            ;; this one must be snake_case... this is not documented, I just tried and failed a few times
-           :keyConfigurations [{:propertyKey "the_arqivist_props"
-                                :extractions (mapv utils/content-properties-extraction (utils/content-properties-ks))}]}]}}})))
+            :keyConfigurations [{:propertyKey "the_arqivist_props"
+                                 :extractions (mapv utils/content-properties-extraction (utils/content-properties-ks))}]}]}}}
+       response
+       (content-type "application/json")))))
 
 (defn installed
   "
@@ -85,12 +90,12 @@
       (do
         (mulog/log ::inserting-new-atlassian-tenant :base-url baseUrl)
         (sql/insert! db-connection :atlassian_tenants data-to-insert {:return-keys true})
-        {:status 200 :body "OK"})
+        (-> "OK" response (content-type "text/plain")))
 
       (do
         (mulog/log ::updating-existing-atlassian-tenant :base-url baseUrl)
         (sql/update! db-connection :atlassian_tenants data-to-insert {:id tenant_id})
-        {:status 200 :body "OK"}))))
+        (-> "OK" response (content-type "text/plain"))))))
 
 (defn enabled
   "
@@ -103,9 +108,8 @@
   (let [res (utils/create-space! (get-in system [:env :atlassian :descriptor-key]) lifecycle-payload)]
 
     (if (= (:status res) 200)
-      {:status 200 :body "OK"}
-      ;; TODO: something more useful here? This endpint is not consumed by anyone though, only the Atlassian bots
-      {:status 500 :body "ERROR"})))
+      (-> "OK" response (content-type "text/plain"))
+      (-> {:status 500 :body "Couldn't create Confluence space."} (content-type "text-plain")))))
 
 (defn uninstalled
   "
@@ -124,24 +128,54 @@
             first)]
 
     ;; drop the row corresponding to the current tenant, plus the row in  'slack_teams'
-    ;; TODO: wrap in try/catch
-    (mulog/log ::uninstalling-app
-               :base-url baseUrl
-               :slack-team-id external_team_id
-               :slack-team-name team_name
-               :local-time (java.time.LocalDateTime/now))
+    (mulog/with-context
+     {:slack-team-id external_team_id
+      :slack-team-name team_name
+      :tenant-id tenant_id
+      :base-url baseUrl}
 
-    (sql/delete! db-connection :atlassian_tenants {:id tenant_id})
+      (try
+        (sql/delete! db-connection :atlassian_tenants {:id tenant_id})
+        (mulog/log ::atlassian-tenant-dropped-from-db
+                   :success :true
+                   :local-time (java.time.LocalDateTime/now))
 
-    ;; TODO: wrap in try/catch
-    @(httpkit/get
-      (str "https://slack.com/api/apps.uninstall?"
-           "client_id=" (get-in system [:env :slack :arqivist-slack-client-id])
-           "&client_secret=" (get-in system [:env :slack :arqivist-slack-client-secret])
-           {:headers {"Content-Type" "application/json; charset=utf-8"}
-            :oauth-token access_token}))
+        (let [res @(httpkit/get
+                    (str "https://slack.com/api/apps.uninstall?"
+                         "client_id=" (get-in system [:env :slack :arqivist-slack-client-id])
+                         "&client_secret=" (get-in system [:env :slack :arqivist-slack-client-secret]))
+                    {:headers {"Content-Type" "application/json; charset=utf-8"}
+                     :oauth-token access_token})]
+          (cond
+            (spec/invalid? (spec/conform ::slack-specs/apps-uninstall res))
+            (do
+              (mulog/log ::uninstalled-from-slack
+                         :success :false
+                         :error "Slack API response did not conform to spec"
+                         :local-time (java.time.LocalDateTime/now))
+              (-> {:status 500 :body "Couldn't uninstall from Slack, got invalid response"} (content-type "text-plain")))
 
-    {:status 200 :body "OK"}))
+            (:ok res)
+            (do
+              (mulog/log ::uninstalled-from-slack
+                         :success :true
+                         :local-time (java.time.LocalDateTime/now))
+              (-> "OK" response (content-type "text/plain")))
+
+            :else
+            (do
+              (mulog/log ::uninstalled-from-slack
+                         :success :false
+                         :error (:error res)
+                         :local-time (java.time.LocalDateTime/now))
+              (-> {:status 500 :body "Couldn't uninstall from Slack!"} (content-type "text-plain")))))
+
+        (catch Exception e
+          ;; TODO: send a Slack message to the admin user informing them this failed, and they need to manually remove the app
+          (mulog/log ::uninstalling-app
+                     :success :false
+                     :error (.getMessage e)
+                     :local-time (java.time.LocalDateTime/now)))))))
 
 (defn lifecycle
   "
