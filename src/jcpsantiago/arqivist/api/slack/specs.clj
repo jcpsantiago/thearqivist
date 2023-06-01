@@ -25,6 +25,11 @@
 
 ;; OAuth redirect
 (spec/def ::code string?)
+(spec/def ::state (spec/nilable string?))
+
+(spec/def ::oath-redirect
+  (spec/keys
+    :req-un [::code ::state]))
 
 ;; Access token request
 (spec/def ::access-token-request
