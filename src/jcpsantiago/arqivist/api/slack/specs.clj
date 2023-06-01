@@ -11,8 +11,8 @@
 
 (spec/def ::apps-uninstall
   (spec/or
-    :ok-response (spec/keys :req-un [::ok])
-    :error-response ::api-error))
+   :ok-response (spec/keys :req-un [::ok])
+   :error-response ::api-error))
 
 ;; Incoming requests -------------------------------------------------------
 
@@ -55,7 +55,6 @@
   (spec/keys
    :req-un [::type ::team ::user ::view]))
 
-
 ;; Internal representations ------------------------------------------------
 (spec/def ::team-attributes
   (spec/keys
@@ -64,12 +63,10 @@
 
 ;; API responses -----------------------------------------------------------
 
-
 (spec/def ::next_cursor string?)
 (spec/def ::response_metadata
   (spec/keys
    :req-un [::next_cursor]))
-
 
 (spec/def ::channel
   (spec/keys
