@@ -4,8 +4,9 @@
   "
   (:require
    [com.brunobonacci.mulog :as mulog]
+   [jcpsantiago.arqivist.api.slack.pages :as pages]
    [next.jdbc.sql :as sql]
-   [ring.util.response :refer [redirect]]))
+   [ring.util.response :refer [response]]))
 
 (defn insert-slack-team!
   "
@@ -32,6 +33,13 @@
                     :atlassian_tenant_id tenant_id}
                    {:return-keys true})
       (catch Exception e (mulog/log ::inserting-slack-team :team-id team_id :tenant-id tenant_id :error (.getMessage e) :local-time (java.time.LocalDateTime/now)))
-      (finally (redirect "https://arqivist.app")))
+      (finally (response
+                (pages/slack-outcome
+                 [:h1 "Houston we have a problem!"]
+                 [:p "We are having some issues installing The Arqivist. Our technicians were alerted, and will work ASAP at deploying a fix."]
+                 [:p "Please try to install again later."]))))
 
-    (redirect "https://arqivist.app")))
+    (response
+     (pages/slack-outcome
+      [:h1 "Installation successful!"]
+      [:p  "You can now close this tab and start using The Arqivist in your Slack app."]))))

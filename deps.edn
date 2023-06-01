@@ -29,7 +29,10 @@
   camel-snake-kebab/camel-snake-kebab {:mvn/version "0.4.3"}
   metosin/muuntaja {:mvn/version "0.6.8"}
   metosin/reitit {:mvn/version "0.6.0"}
-  metosin/jsonista {:mvn/version "0.3.7"}}
+  metosin/jsonista {:mvn/version "0.3.7"}
+
+  ;; Webpages
+  hiccup/hiccup {:mvn/version "2.0.0-alpha2"}}
 
  :aliases
  {;; Clojure.main execution of application
