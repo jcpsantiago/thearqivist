@@ -100,18 +100,27 @@
                              (jsonista/read-value jsonista/keyword-keys-object-mapper))]
 
       (cond
+        ;; In case someone gets the "Add to Slack" link without installing in Confluence first
         (nil? tenant_id)
         (do
-          (mulog/log ::inserting-slack-team :base-url state :error "No tenant found in the db for the given base-url" :local-time (java.time.LocalDateTime/now))
+          (mulog/log ::inserting-slack-team
+                     :base-url state
+                     :error "No tenant found in the db for the given base-url"
+                     :local-time (java.time.LocalDateTime/now))
           (redirect "https://google.com"))
 
         (spec/invalid? (spec/conform ::specs/oauth-access token-response))
         (do
-          (mulog/log ::inserting-slack-team :error (spec/explain-data ::specs/oauth-access token-response) :local-time (java.time.LocalDateTime/now))
+          (mulog/log ::inserting-slack-team
+                     :error (spec/explain-data ::specs/oauth-access token-response)
+                     :local-time (java.time.LocalDateTime/now))
           (redirect "https://arqivist.app"))
 
         (:ok token-response) (utils/insert-slack-team! token-response tenant_id db-connection)
 
         :else (do
-                (mulog/log ::inserting-slack-team :tenant-id tenant_id :error (:error token-response) :local-time (java.time.LocalDateTime/now))
+                (mulog/log ::inserting-slack-team
+                           :tenant-id tenant_id
+                           :error (:error token-response)
+                           :local-time (java.time.LocalDateTime/now))
                 (redirect "https://arqivist.app"))))))
