@@ -36,7 +36,7 @@
 (defn verify-atlassian-lifecycle
   "Middleware to verify the JWT token present in
   Atlassian lifecycle installed/uninstalled events."
-  [handler id]
+  [handler _]
   (fn [request]
     (let [jwt-token (-> (or (get-in request [:headers "authorization"]) "")
                         (string/replace #"JWT\s" ""))]
@@ -56,4 +56,3 @@
                      :local-time (java.time.LocalDateTime/now))
           ;; Atlassian only fails on 500, all other statuses will be seen as "OK"
           {:status 500 :body ""})))))
-
