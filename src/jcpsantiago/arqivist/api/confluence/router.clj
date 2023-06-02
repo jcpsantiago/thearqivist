@@ -1,5 +1,7 @@
 (ns jcpsantiago.arqivist.api.confluence.router
-  "Reitit routes for interacting with Confluence.")
+  "Reitit routes for interacting with Confluence."
+  (:require
+   [jcpsantiago.arqivist.middleware :as middleware-arqivist]))
 
 (defn routes
   "Routes used by Confluence:
@@ -26,7 +28,8 @@
       :handler {:status 200 :body "HELLO!"}}}]
 
    ["/installed"
-    {:post
+    {:middleware [[middleware-arqivist/verify-atlassian-lifecycle :verify-atlassian-jwt]]
+     :post
      {:summary "Webhook for the 'install' event"
       :description "Webhook for the `install` event<br>
                     Triggered in various events, but the most important is the initial app installation to a site.<br>
@@ -44,7 +47,8 @@
       :handler {:status 200 :body "HELLO!"}}}]
 
    ["/uninstalled"
-    {:post
+    {:middleware [[middleware-arqivist/verify-atlassian-lifecycle :verify-atlassian-jwt]]
+     :post
      {:summary "Webhook for the 'uninstall' event"
       :description "Webhook for the `uninstall` event when a user uninstalls the app from a site."
       :responses {200 {:body string?}}
