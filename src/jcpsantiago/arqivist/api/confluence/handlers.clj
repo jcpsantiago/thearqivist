@@ -9,8 +9,10 @@
    [clojure.spec.alpha :as spec]
    [com.brunobonacci.mulog :as mulog]
    [org.httpkit.client :as httpkit]
-   [jcpsantiago.arqivist.api.slack.specs :as slack-specs]
+   [jcpsantiago.arqivist.api.confluence.db :as db]
    [jcpsantiago.arqivist.api.confluence.utils :as utils]
+   [jcpsantiago.arqivist.api.slack.specs :as slack-specs]
+   [jsonista.core :as jsonista]
    [next.jdbc.sql :as sql]
    [ring.util.response :refer [response content-type]]))
 
@@ -54,6 +56,7 @@
            :keyConfigurations [{:propertyKey "the_arqivist_props"
                                 :extractions (mapv utils/content-properties-extraction (utils/content-properties-ks))}]}]}}))))
 
+
 (defn installed
   "
   Ring handler for the 'installed' Atlassian lifecycle event.
@@ -81,30 +84,40 @@
                         :oauth_client_id oauthClientId}]
 
     (if (nil? tenant_id)
+      ;; tenant did not connect before, we'll insert it into the db and create a space
+      (let [inserted (db/insert-new-atlassian-tenant! data-to-insert db-connection)]
+        (if inserted
+          ;; If we succeed in inserting branch
+          (let [res (utils/create-space! (get-in system [:atlassian-env :descriptor-key]) lifecycle-payload)]
+            (if (= (:status res) 200)
+              (do
+                (mulog/log ::created-arqivist-confluence-space
+                           :success :true
+                           :local-time (java.time.LocalDateTime/now))
+                (response "OK"))
 
-      (do
-        (mulog/log ::inserting-new-atlassian-tenant :base-url baseUrl)
-        (sql/insert! db-connection :atlassian_tenants data-to-insert {:return-keys true})
-        (-> "OK" response (content-type "text/plain")))
+              (do
+                (mulog/log ::created-arqivist-confluence-space
+                           :success :false
+                           :local-time (java.time.LocalDateTime/now))
 
-      (do
-        (mulog/log ::updating-existing-atlassian-tenant :base-url baseUrl)
-        (sql/update! db-connection :atlassian_tenants data-to-insert {:id tenant_id})
-        (-> "OK" response (content-type "text/plain"))))))
+                (sql/delete! db-connection :atlassian_tenants {:id (:atlassian_tenants/id inserted)})
 
-(defn enabled
-  "
-  Ring handler for the 'enabled' event issued after 'installed' is successful.
-  It creates a space in the user's Confluence instance, used later to store all archived conversations.
-  "
-  [lifecycle-payload _ system]
-  (mulog/log ::atlassian-enabled :base-url (:baseUrl lifecycle-payload) :local-time (java.time.LocalDateTime/now))
+                (mulog/log ::cleaning-up-inserting-new-tenant
+                           :success :true
+                           :local-time (java.time.LocalDateTime/now))
+                {:status 500 :body "Couldn't create Confluence space."})))
 
-  (let [res (utils/create-space! (get-in system [:env :atlassian :descriptor-key]) lifecycle-payload)]
+          ;; If we fail in inserting i.e. else branch
+          {:status 500 :body "Couldn't insert credentials into db."}))
 
-    (if (= (:status res) 200)
-      (-> "OK" response (content-type "text/plain"))
-      (-> {:status 500 :body "Couldn't create Confluence space."} (content-type "text-plain")))))
+      ;; else branch:
+      ;; tenant already exists in the db, we'll update our data instead
+      ;; this may happen because the tenant has new credentials from Atlassian
+      (let [updated (db/update-existing-atlassian-tenant! data-to-insert db-connection {:id tenant_id})]
+        (if updated
+          (response "OK")
+          {:status 500 :body "Couldn't update tenant's credentials."})))))
 
 (defn uninstalled
   "
@@ -135,18 +148,21 @@
                   :success :true
                   :local-time (java.time.LocalDateTime/now))
 
-       (let [res @(httpkit/get
-                   (str "https://slack.com/api/apps.uninstall?"
-                        "client_id=" (get-in system [:env :slack :arqivist-slack-client-id])
-                        "&client_secret=" (get-in system [:env :slack :arqivist-slack-client-secret]))
-                   {:headers {"Content-Type" "application/json; charset=utf-8"}
-                    :oauth-token access_token})]
+       (let [res (-> @(httpkit/get
+                       (str "https://slack.com/api/apps.uninstall?"
+                            "client_id=" (get-in system [:env :slack :arqivist-slack-client-id])
+                            "&client_secret=" (get-in system [:env :slack :arqivist-slack-client-secret]))
+                       {:headers {"Content-Type" "application/json; charset=utf-8"}
+                        :oauth-token access_token})
+                     :body
+                     (jsonista/read-value jsonista/keyword-keys-object-mapper))]
          (cond
            (spec/invalid? (spec/conform ::slack-specs/apps-uninstall res))
            (do
              (mulog/log ::uninstalled-from-slack
                         :success :false
                         :error "Slack API response did not conform to spec"
+                        :spec-explain (spec/explain ::slack-specs/apps-uninstall res)
                         :local-time (java.time.LocalDateTime/now))
              (-> {:status 500 :body "Couldn't uninstall from Slack, got invalid response"} (content-type "text-plain")))
 
@@ -181,15 +197,19 @@
     (let [db-connection (:db-connection system)
           lifecycle-payload (:body-params request)
           event-type (:eventType lifecycle-payload)
+          base-url (:baseUrl lifecycle-payload)
           {:keys [:atlassian_tenants/tenant_id]} (-> (sql/find-by-keys
                                                       db-connection
                                                       :atlassian_tenants
                                                       {:base_url_short (utils/base-url-short (:baseUrl lifecycle-payload))}
                                                       {:columns [[:id :tenant_id]]})
                                                      first)]
-      (mulog/log ::lifecycle-event :event-type event-type :base-url (:baseUrl lifecycle-payload) :local-time (java.time.LocalDateTime/now))
+      (mulog/log ::lifecycle-event :event-type event-type :base-url base-url :local-time (java.time.LocalDateTime/now))
 
-      (case event-type
-        "installed" (installed lifecycle-payload tenant_id system)
-        "enabled" (enabled lifecycle-payload tenant_id system)
-        "uninstalled" (uninstalled lifecycle-payload tenant_id system)))))
+      (mulog/with-context
+       {:base-url (:baseUrl lifecycle-payload)
+        :event-type event-type}
+
+       (case event-type
+         "installed" (installed lifecycle-payload tenant_id system)
+         "uninstalled" (uninstalled lifecycle-payload tenant_id system))))))

@@ -38,15 +38,6 @@
       :parameters {:body ::specs/installed}
       :handler (handlers/lifecycle system)}}]
 
-   ["/enabled"
-    {:post
-     {:summary "Webhook for the 'enabled' event"
-      :description "Webhook for the `enabled` event.<br>
-                    App is enabled and users can start using the app.<br>
-                    Triggered after a successful app installation or upgrade. This event will not be triggered for any other type of installed lifecycle events."
-      :parameters {:body ::specs/lifecycle}
-      :handler (handlers/lifecycle system)}}]
-
    ["/uninstalled"
     {:post
      {:summary "Webhook for the 'uninstall' event"
