@@ -129,48 +129,48 @@
       :tenant-id tenant_id
       :base-url baseUrl}
 
-      (try
-        (sql/delete! db-connection :atlassian_tenants {:id tenant_id})
-        (mulog/log ::atlassian-tenant-dropped-from-db
-                   :success :true
-                   :local-time (java.time.LocalDateTime/now))
+     (try
+       (sql/delete! db-connection :atlassian_tenants {:id tenant_id})
+       (mulog/log ::atlassian-tenant-dropped-from-db
+                  :success :true
+                  :local-time (java.time.LocalDateTime/now))
 
-        (let [res @(httpkit/get
-                    (str "https://slack.com/api/apps.uninstall?"
-                         "client_id=" (get-in system [:env :slack :arqivist-slack-client-id])
-                         "&client_secret=" (get-in system [:env :slack :arqivist-slack-client-secret]))
-                    {:headers {"Content-Type" "application/json; charset=utf-8"}
-                     :oauth-token access_token})]
-          (cond
-            (spec/invalid? (spec/conform ::slack-specs/apps-uninstall res))
-            (do
-              (mulog/log ::uninstalled-from-slack
-                         :success :false
-                         :error "Slack API response did not conform to spec"
-                         :local-time (java.time.LocalDateTime/now))
-              (-> {:status 500 :body "Couldn't uninstall from Slack, got invalid response"} (content-type "text-plain")))
+       (let [res @(httpkit/get
+                   (str "https://slack.com/api/apps.uninstall?"
+                        "client_id=" (get-in system [:env :slack :arqivist-slack-client-id])
+                        "&client_secret=" (get-in system [:env :slack :arqivist-slack-client-secret]))
+                   {:headers {"Content-Type" "application/json; charset=utf-8"}
+                    :oauth-token access_token})]
+         (cond
+           (spec/invalid? (spec/conform ::slack-specs/apps-uninstall res))
+           (do
+             (mulog/log ::uninstalled-from-slack
+                        :success :false
+                        :error "Slack API response did not conform to spec"
+                        :local-time (java.time.LocalDateTime/now))
+             (-> {:status 500 :body "Couldn't uninstall from Slack, got invalid response"} (content-type "text-plain")))
 
-            (:ok res)
-            (do
-              (mulog/log ::uninstalled-from-slack
-                         :success :true
-                         :local-time (java.time.LocalDateTime/now))
-              (-> "OK" response (content-type "text/plain")))
+           (:ok res)
+           (do
+             (mulog/log ::uninstalled-from-slack
+                        :success :true
+                        :local-time (java.time.LocalDateTime/now))
+             (-> "OK" response (content-type "text/plain")))
 
-            :else
-            (do
-              (mulog/log ::uninstalled-from-slack
-                         :success :false
-                         :error (:error res)
-                         :local-time (java.time.LocalDateTime/now))
-              (-> {:status 500 :body "Couldn't uninstall from Slack!"} (content-type "text-plain")))))
+           :else
+           (do
+             (mulog/log ::uninstalled-from-slack
+                        :success :false
+                        :error (:error res)
+                        :local-time (java.time.LocalDateTime/now))
+             (-> {:status 500 :body "Couldn't uninstall from Slack!"} (content-type "text-plain")))))
 
-        (catch Exception e
-          ;; TODO: send a Slack message to the admin user informing them this failed, and they need to manually remove the app
-          (mulog/log ::uninstalling-app
-                     :success :false
-                     :error (.getMessage e)
-                     :local-time (java.time.LocalDateTime/now)))))))
+       (catch Exception e
+         ;; TODO: send a Slack message to the admin user informing them this failed, and they need to manually remove the app
+         (mulog/log ::uninstalling-app
+                    :success :false
+                    :error (.getMessage e)
+                    :local-time (java.time.LocalDateTime/now)))))))
 
 (defn lifecycle
   "
