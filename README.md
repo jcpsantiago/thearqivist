@@ -44,7 +44,7 @@ After installing The Arqivist in Slack, you can interact with the bot in two way
 * Start a REPL with `make repl`
 * Start the system with `(start)` in the Clojure REPL
 * `make lint` to check for format and lint issue, `make lint-fix` to automatically fix them (stage or commit other changes first) - requires node.js locally
-  
+
 ## Contributors
 
 [![](https://contrib.rocks/image?repo=jcpsantiago/thearqivist)](https://github.com/jcpsantiago/thearqivist/graphs/contributors)
@@ -55,4 +55,4 @@ If you found a bug, or want to propose new features please open an issue. PRs ar
 
 ## License
 
-MIT 
+MIT
