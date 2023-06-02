@@ -79,10 +79,10 @@
                                                   :representation "plain"}}})}))]
     (if (= (:status res) 200)
       (do
-        (mulog/log ::confluence-space-created :ok :true :base-url base-url)
+        (mulog/log ::confluence-space-created :success :true)
         {:ok true})
       (do
-        (mulog/log ::confluence-space-created :ok :false :base-url base-url :exception (:body res))
+        (mulog/log ::confluence-space-created :success :false :error (:body res))
         {:ok false}))))
 
 (defn tenant-name
