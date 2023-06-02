@@ -48,9 +48,9 @@
           :key "get-started"}
          :confluenceContentProperties
          [{:name {:value "Arqivist Metadata"}
-            ;; This key must be camelcase or kebab-case, *never* snake_case
+           ;; This key must be camelcase or kebab-case, *never* snake_case
            :key "theArqivistMetadata"
-            ;; this one must be snake_case... this is not documented, I just tried and failed a few times
+           ;; this one must be snake_case... this is not documented, I just tried and failed a few times
            :keyConfigurations [{:propertyKey "the_arqivist_props"
                                 :extractions (mapv utils/content-properties-extraction (utils/content-properties-ks))}]}]}}))))
 
@@ -79,8 +79,6 @@
                         :description description
                         :service_entitlement_number serviceEntitlementNumber
                         :oauth_client_id oauthClientId}]
-
-    (mulog/log ::atlassian-installed :base-url baseUrl :local-time (java.time.LocalDateTime/now))
 
     (if (nil? tenant_id)
 
@@ -168,7 +166,7 @@
               (-> {:status 500 :body "Couldn't uninstall from Slack!"} (content-type "text-plain")))))
 
         (catch Exception e
-         ;; TODO: send a Slack message to the admin user informing them this failed, and they need to manually remove the app
+          ;; TODO: send a Slack message to the admin user informing them this failed, and they need to manually remove the app
           (mulog/log ::uninstalling-app
                      :success :false
                      :error (.getMessage e)
