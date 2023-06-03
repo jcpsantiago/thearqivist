@@ -56,6 +56,7 @@
 (defn get-spaces!
   "
   Calls the Confluence API and retrieves a list of existing spaces.
+  See the example response payload in /test/jcpsantiago/get_confluence_spaces.json.
   "
   [descriptor-key lifecycle-payload shared_secret]
   (let [canonical-url "/rest/api/space"
