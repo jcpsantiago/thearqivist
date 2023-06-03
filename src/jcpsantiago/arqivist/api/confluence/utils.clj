@@ -7,7 +7,6 @@
    [buddy.core.hash :refer [sha256]]
    [buddy.sign.jwt :as jwt]
    [clojure.string :as string]
-   [com.brunobonacci.mulog :as mulog]
    [org.httpkit.client :as httpkit]
    [java-time :as t]
    [jsonista.core :as jsonista]))
