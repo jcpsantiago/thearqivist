@@ -58,7 +58,12 @@
                    :req-un [::access_token ::scope ::bot_user_id ::app_id ::team ::authed_user])
    :error-response ::error-response))
 
-;; Slash command request
+;; App uninstallation
+(spec/def ::apps-uninstall
+  (spec/or
+   :ok-response (spec/keys :req-un [::ok])
+   :error-response ::api-error))
+
 ;; Slash commands are sent via POST requests with Content-type application/x-www-form-urlencoded.
 ;; See the docs in https://api.slack.com/interactivity/slash-commands#app_command_handling
 ;;

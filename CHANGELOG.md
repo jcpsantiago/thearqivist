@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * Added scaffolding for routes using reitit
 * dev: add `lint-fix` Makefile task to automatically apply changes from MegaLinter
 * [#30](https://github.com/jcpsantiago/thearqivist/issues/30) Add atlassian lifecycle endpoints
+* [#34](https://github.com/jcpsantiago/thearqivist/issues/34) Add middleware to verify Atlassian lifecycle event requests
 * [#32](https://github.com/jcpsantiago/thearqivist/issues/32) Add Slack redirect endpoint
 
 ## 0.1.0 - 2023-04-20

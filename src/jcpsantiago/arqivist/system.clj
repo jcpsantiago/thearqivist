@@ -109,7 +109,8 @@
     :env {:atlassian {:vendor-name (or (System/getenv "ARQIVIST_VENDOR_NAME") "burstingburrito")
                       :vendor-url (or (System/getenv "ARQIVIST_VENDOR_URL") "https://burstingburrito.com")
                       :base-url (or (System/getenv "ARQIVIST_BASE_URL") (ngrok-tunnel-url))
-                      :descriptor-key (or (System/getenv "ARQIVIST_ATLASSIAN_DESCRIPTOR_KEY") "thearqivist-dev")}
+                      :descriptor-key (or (System/getenv "ARQIVIST_ATLASSIAN_DESCRIPTOR_KEY") "thearqivist-dev")
+                      :space-key (or (System/getenv "ARQIVIST_CONFLUENCE_SPACE_KEY") "ARQIVISTSTORE")}
 
           :slack {:client-id (System/getenv "ARQIVIST_SLACK_CLIENT_ID")
                   :client-secret (System/getenv "ARQIVIST_SLACK_CLIENT_SECRET")
