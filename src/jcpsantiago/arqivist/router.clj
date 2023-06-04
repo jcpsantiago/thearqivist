@@ -62,7 +62,7 @@
                        parameters/parameters-middleware
                        ;; content-negotiation
                        middleware-muuntaja/format-middleware
-                       ;; coercing response bodys
+                       ;; coercing response body
                        coercion/coerce-response-middleware
                        ;; coercing request parameters
                        coercion/coerce-request-middleware

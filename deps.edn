@@ -7,6 +7,8 @@
 
   ;; System
   party.donut/system {:mvn/version "0.0.203"}
+  buddy/buddy-sign {:mvn/version "3.4.333"}
+  clojure.java-time/clojure.java-time {:mvn/version "1.2.0"}
 
   ;; Logging
   ;; create events and send to publisher
@@ -24,6 +26,7 @@
 
   ;; HTTP server
   http-kit/http-kit {:mvn/version "2.6.0"}
+  camel-snake-kebab/camel-snake-kebab {:mvn/version "0.4.3"}
   metosin/muuntaja {:mvn/version "0.6.8"}
   metosin/reitit {:mvn/version "0.6.0"}
   metosin/jsonista {:mvn/version "0.3.7"}}
