@@ -73,7 +73,6 @@
 
 ;; ------------------------------------------------------
 ;; Handler for OAuth redirection, installation in Slack
-;; TODO: Add success and error pages
 ;; TODO: Add alerting system on errors
 (defn oauth-redirect
   "
