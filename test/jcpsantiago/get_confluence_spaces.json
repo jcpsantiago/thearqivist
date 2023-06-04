@@ -1,0 +1,132 @@
+{
+  "results": [
+    {
+      "id": 33325070,
+      "key": "ARQIVISTSTORE",
+      "name": "Archived Slack threads",
+      "type": "global",
+      "status": "current",
+      "_expandable": {
+        "settings": "/rest/api/space/ARQIVISTSTORE/settings",
+        "metadata": "",
+        "operations": "",
+        "lookAndFeel": "/rest/api/settings/lookandfeel?spaceKey=ARQIVISTSTORE",
+        "identifiers": "",
+        "permissions": "",
+        "icon": "",
+        "description": "",
+        "theme": "/rest/api/space/ARQIVISTSTORE/theme",
+        "history": "",
+        "homepage": "/rest/api/content/33325311"
+      },
+      "_links": {
+        "webui": "/spaces/ARQIVISTSTORE",
+        "self": "https://softpepe.atlassian.net/wiki/rest/api/space/ARQIVISTSTORE"
+      }
+    },
+    {
+      "id": 393233,
+      "key": "SLCKARQVST",
+      "name": "Archived Slack threads",
+      "type": "global",
+      "status": "current",
+      "_expandable": {
+        "settings": "/rest/api/space/SLCKARQVST/settings",
+        "metadata": "",
+        "operations": "",
+        "lookAndFeel": "/rest/api/settings/lookandfeel?spaceKey=SLCKARQVST",
+        "identifiers": "",
+        "permissions": "",
+        "icon": "",
+        "description": "",
+        "theme": "/rest/api/space/SLCKARQVST/theme",
+        "history": "",
+        "homepage": "/rest/api/content/393414"
+      },
+      "_links": {
+        "webui": "/spaces/SLCKARQVST",
+        "self": "https://softpepe.atlassian.net/wiki/rest/api/space/SLCKARQVST"
+      }
+    },
+    {
+      "id": 131076,
+      "key": "ARQHELP",
+      "name": "Arqivist Helpdesk",
+      "type": "global",
+      "status": "current",
+      "_expandable": {
+        "settings": "/rest/api/space/ARQHELP/settings",
+        "metadata": "",
+        "operations": "",
+        "lookAndFeel": "/rest/api/settings/lookandfeel?spaceKey=ARQHELP",
+        "identifiers": "",
+        "permissions": "",
+        "icon": "",
+        "description": "",
+        "theme": "/rest/api/space/ARQHELP/theme",
+        "history": "",
+        "homepage": "/rest/api/content/131156"
+      },
+      "_links": {
+        "webui": "/spaces/ARQHELP",
+        "self": "https://softpepe.atlassian.net/wiki/rest/api/space/ARQHELP"
+      }
+    },
+    {
+      "id": 163842,
+      "key": "DEMO",
+      "name": "Demo service project",
+      "type": "global",
+      "status": "current",
+      "_expandable": {
+        "settings": "/rest/api/space/DEMO/settings",
+        "metadata": "",
+        "operations": "",
+        "lookAndFeel": "/rest/api/settings/lookandfeel?spaceKey=DEMO",
+        "identifiers": "",
+        "permissions": "",
+        "icon": "",
+        "description": "",
+        "theme": "/rest/api/space/DEMO/theme",
+        "history": "",
+        "homepage": "/rest/api/content/163922"
+      },
+      "_links": {
+        "webui": "/spaces/DEMO",
+        "self": "https://softpepe.atlassian.net/wiki/rest/api/space/DEMO"
+      }
+    },
+    {
+      "id": 786436,
+      "key": "~6235c64f1f014e0069cec2b0",
+      "name": "Joao Santiago",
+      "type": "personal",
+      "status": "current",
+      "_expandable": {
+        "settings": "/rest/api/space/~6235c64f1f014e0069cec2b0/settings",
+        "metadata": "",
+        "operations": "",
+        "lookAndFeel": "/rest/api/settings/lookandfeel?spaceKey=~6235c64f1f014e0069cec2b0",
+        "identifiers": "",
+        "permissions": "",
+        "icon": "",
+        "description": "",
+        "theme": "/rest/api/space/~6235c64f1f014e0069cec2b0/theme",
+        "history": "",
+        "homepage": "/rest/api/content/786506"
+      },
+      "_links": {
+        "webui": "/spaces/~6235c64f1f014e0069cec2b0",
+        "self": "https://softpepe.atlassian.net/wiki/rest/api/space/~6235c64f1f014e0069cec2b0"
+      }
+    }
+  ],
+  "start": 0,
+  "limit": 25,
+  "size": 5,
+  "_links": {
+    "base": "https://softpepe.atlassian.net/wiki",
+    "context": "/wiki",
+    "self": "https://softpepe.atlassian.net/wiki/rest/api/space"
+  }
+}
