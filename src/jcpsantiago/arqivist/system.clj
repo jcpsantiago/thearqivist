@@ -88,7 +88,8 @@
            ;; these components and config are passed on to the running instance
            :config {:system {:db-connection (donut/ref [:db :db-connection])
                              :cache (donut/ref [:cache :cache])
-                             :atlassian-env (donut/ref [:env :atlassian])}
+                             :atlassian-env (donut/ref [:env :atlassian])
+                             :slack-env (donut/ref [:env :slack])}
                     :options {:port (donut/ref [:env :port])
                               :join? false}}})
 
@@ -110,7 +111,14 @@
                       :base-url (or (System/getenv "ARQIVIST_BASE_URL") (ngrok-tunnel-url))
                       :descriptor-key (or (System/getenv "ARQIVIST_ATLASSIAN_DESCRIPTOR_KEY") "thearqivist-dev")
                       :space-key (or (System/getenv "ARQIVIST_CONFLUENCE_SPACE_KEY") "ARQIVISTSTORE")}
+
+          :slack {:client-id (System/getenv "ARQIVIST_SLACK_CLIENT_ID")
+                  :client-secret (System/getenv "ARQIVIST_SLACK_CLIENT_SECRET")
+                  :signing-secret (System/getenv "ARQIVIST_SLACK_SIGNING_SECRET")
+                  :share-url (System/getenv "ARQIVIST_SLACK_SHARE_URL")}
+
           :port (parse-long (or (System/getenv "ARQIVIST_PORT") "8989"))
+
           :datasource-options {;; NOTE: No idea what each of these actually do, should learn :D
                                :maximum-pool-size 5
                                :minimum-idle 2
