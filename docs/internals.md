@@ -1,8 +1,15 @@
-# Internals
+# Technical docs
 
-This page describes how the app works.
+This page fcouses on how the app works,
+and is meant for developers wanting to collaborate.
+If any term is unclear, see the [Glossary](glossary.md).
 
-## Actions in sequence
+If you want to know _how to use_ the app,
+then go to [Getting started](getting_started.md) instead.
+
+## Interacting with Slack
+
+This is a step-by-step diagram of what happens when a user interacts with the app from Slack.
 
 ```mermaid
 sequenceDiagram
@@ -15,8 +22,12 @@ sequenceDiagram
     Note left of U: user is waiting
     S->>+A: Call matching endpoint
     A->>S: Respond 200 immediately
+
     Note over S,A: start contingency checks<br>(depends on endpoint)
-    A->A: Is message part of a thread?
+
+    break license is not valid
+        A-)U: inform user the license expired
+    end
     break message is not in a thread
         A-)U: Inform user that shortcuts only work in threads
     end
@@ -32,7 +43,9 @@ sequenceDiagram
     opt thread or channel is already in Confluence
         A-)U: Ask user if it's ok to overwrite existing page
     end
+
     Note over S,A: end contingency checks
+
     A-)U: Show modal confirming action/requesting more info
     Note left of U: sees modal
     A--)S: GET conversation.history (`ch`)
@@ -46,9 +59,6 @@ sequenceDiagram
     A->>-U: Feedback
     Note left of U: user sees feedback, end
 ```
-
-## Interacting with Slack
-
 There are two ways to use the bot in Slack:
 
 * Via a [message shortcut :octicons-link-external-16:](https://api.slack.com/interactivity/shortcuts/using#message_shortcuts)
@@ -77,3 +87,4 @@ We call these `contingencies` internally, and they are checked on each request:
 If all conditions are met, the user will see a modal for final confirmation of their action.
 Otherwise, they will receive a modal informing them that something is wrong,
 and they must take some action e.g. invite The Arqivist into the channel manually.
+

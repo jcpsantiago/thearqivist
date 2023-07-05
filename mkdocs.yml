@@ -1,8 +1,12 @@
 site_name: The Arqivist docs
 theme:
   name: material
+  features:
+    - content.tooltips
 markdown_extensions:
+  - abbr
   - attr_list
+  - pymdownx.snippets
   - pymdownx.emoji:
       emoji_index: !!python/name:materialx.emoji.twemoji
       emoji_generator: !!python/name:materialx.emoji.to_svg
