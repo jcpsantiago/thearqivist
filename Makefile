@@ -156,15 +156,15 @@ lint-clean:  ## Clean MegaLinter report information
 
 # ------- Docker Containers ---------- #
 
-docker-build:  ## Build Fraud API Service with docker compose
+docker-build:  ## Build Service with docker compose
 	$(info --------- Docker Compose Build ---------)
 	docker compose up --build
 
-docker-build-clean:  ## Build Fraud API Service with docker compose, removing orphans
+docker-build-clean:  ## Build Service with docker compose, removing orphans
 	$(info --------- Docker Compose Build - remove orphans ---------)
 	docker compose up --build --remove-orphans
 
-docker-down:  ## Shut down Fraud API service using docker compose
+docker-down:  ## Shut down Service using docker compose
 	$(info --------- Docker Compose Down ---------)
 	docker-compose down
 
