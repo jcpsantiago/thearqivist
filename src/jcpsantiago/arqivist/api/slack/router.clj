@@ -22,12 +22,12 @@
        :post
        {:summary "Target for Message Shortcut interactions"
         :description "This endpoint receives all interactions initiated by clicking the Message Shortcut button. It also receives all follow-up interactions with the use via modals."
-      ;; TODO: add the rest of the specs, not working yet
-      ;; :parameters {:body :jcpsantiago.arqivist.api.slack.spec/shortcut-body}
+        ;; TODO: add the rest of the specs, not working yet
+        ;; :parameters {:body :jcpsantiago.arqivist.api.slack.spec/shortcut-body}
         :responses {200 {:body string?}}
         :handler handlers/message-shortcut}}]
 
-   ;; TODO: Add example from https://api.slack.com/interactivity/slash-commands#app_command_handling
+     ;; TODO: Add example from https://api.slack.com/interactivity/slash-commands#app_command_handling
      ["/slash"
       {:swagger {:externalDocs
                  {:description "Slack docs about Slash Commands"
@@ -36,8 +36,8 @@
        :post
        {:summary "Target for Slash Command interactions"
         :description "This endpoint receives all interactions initiated by typing the `/arqive` slash command."
-      ;; TODO: add the rest of the specs, not working yet
-      ;; :parameters {:form :jcpsantiago.arqivist.api.slack.spec/slash-form-params}
+        ;; TODO: add the rest of the specs, not working yet
+        ;; :parameters {:form :jcpsantiago.arqivist.api.slack.spec/slash-form-params}
         :responses {200 {:body string?}}
         :handler handlers/slash-command}}]
 
