@@ -58,6 +58,9 @@
           ;; TODO: Add middleware for Slack security checks
           :middleware [;; swagger feature for OpenAPI documentation
                        api-docs/swagger-feature
+                       ;; keeps raw json string, needed to verify Slack requests
+                       ;; TODO: only run the middleware when needed
+                       [middleware-arqivist/wrap-keep-raw-json-string :keep-raw-json]
                        ;; query-params & form-params
                        parameters/parameters-middleware
                        ;; content-negotiation
