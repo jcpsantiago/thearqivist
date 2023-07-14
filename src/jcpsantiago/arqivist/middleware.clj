@@ -20,6 +20,13 @@
     (mulog/log ::keeping-raw-json-string :middleware-id id :uri (:uri request) :local-time (java.time.LocalDateTime/now))
     (handler (update request :body slurp))))
 
+(defn slack-headers-present?
+  "Checks if the necessary headers to verify a Slack request are present.
+   Used as a helper in error messages."
+  [headers]
+  (let [keywordized-headers (keywordize-keys headers)]
+    (every? #(contains? keywordized-headers %) [:x-slack-request-timestamp :x-slack-signature])))
+
 (defn from-slack?
   "Verifies if the request really came from Slack.
   https://api.slack.com/authentication/verifying-requests-from-slack"
@@ -41,35 +48,23 @@
    See official docs https://api.slack.com/authentication/verifying-requests-from-slack"
   [slack-env handler id]
   (fn [request]
-    (let [keywordized-headers (keywordize-keys (:headers request))]
-      (if (every? #(contains? keywordized-headers %) [:x-slack-request-timestamp :x-slack-signature])
-        (let [{:keys [x-slack-signature x-slack-request-timestamp]} keywordized-headers
-              slack-signature (string/replace x-slack-signature #"v0=" "")
-              slack-request?  (from-slack? slack-env
-                                           x-slack-request-timestamp
-                                           (:body request)
-                                           slack-signature)]
-          (if slack-request?
-            (do
-              (mulog/log ::verify-slack-request
-                         :middleware-id id
-                         :success :true
-                         :local-time (java.time.LocalDateTime/now))
-              (handler request))
-            ;; else if request is invalid
-            (do
-              (mulog/log ::verify-slack-request
-                         :middleware-id id
-                         :success :false
-                         :error "The request is not from slack"
-                         :local-time (java.time.LocalDateTime/now))
-              {:status 403, :body "Invalid credentials provided"})))
-        ;; else if headers are missing
+    (let [headers (:headers request)
+          {:keys [x-slack-signature x-slack-request-timestamp]} headers
+          slack-signature (string/replace (or x-slack-signature "") #"v0=" "")
+          valid-slack-request?  (from-slack? slack-env
+                                             x-slack-request-timestamp
+                                             (:body request)
+                                             slack-signature)]
+      (if valid-slack-request?
         (do
-          (mulog/log ::verify-slack-request
-                     :middleware-id id
-                     :success :false
-                     :error "The necessary headers are missing"
+          (mulog/log ::verify-slack-request :middleware-id id :success :true
+                     :local-time (java.time.LocalDateTime/now))
+          (handler request))
+        (do
+          (mulog/log ::verify-slack-request :middleware-id id :success :false
+                     :error (if (slack-headers-present? headers)
+                              "The request is not from Slack"
+                              "The necessary Slack headers are missing")
                      :local-time (java.time.LocalDateTime/now))
           {:status 403 :body "Invalid credentials provided"})))))
 

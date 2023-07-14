@@ -85,13 +85,15 @@
 
 (defn stop
   "Stop the currently running system"
-  []  (donut-repl/stop))
+  []
+  (donut-repl/stop))
 
 (defn restart
   "Restart the system with donut repl,
   Uses clojure.tools.namespace.repl to reload namespaces
   `(clojure.tools.namespace.repl/refresh :after 'donut.system.repl/start)`"
-  [] (donut-repl/restart))
+  []
+  (donut-repl/restart))
 
 ;; ---------------------------------------------------------
 ;; Start Portal and capture all evaluation results
