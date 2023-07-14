@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#34](https://github.com/jcpsantiago/thearqivist/issues/34) Add middleware to verify Atlassian lifecycle event requests
 * [#32](https://github.com/jcpsantiago/thearqivist/issues/32) Add Slack redirect endpoint
 * [#35](https://github.com/jcpsantiago/thearqivist/issues/35) Add Slack request verification middleware
+* Refactor PR #38, improve readability of Slack middleware
  
 ## 0.1.0 - 2023-04-20
 
