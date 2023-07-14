@@ -66,7 +66,7 @@
                               "The request is not from Slack"
                               "The necessary Slack headers are missing")
                      :local-time (java.time.LocalDateTime/now))
-          {:status 403, :body "Invalid credentials provided"})))))
+          {:status 403 :body "Invalid credentials provided"})))))
 
 ;; Logging middleware -----------------------------------------------------
 ;; https://github.com/BrunoBonacci/mulog/blob/master/doc/ring-tracking.md
