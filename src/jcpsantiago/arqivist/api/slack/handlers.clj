@@ -88,7 +88,7 @@
           {:keys [:atlassian_tenants/tenant_id]} (-> (sql/find-by-keys
                                                       db-connection
                                                       :atlassian_tenants
-                                                      {:base_url_short state}
+                                                      {:base_url state}
                                                       {:columns [[:id :tenant_id]]})
                                                      first)
 
