@@ -9,15 +9,43 @@
    [clojure.string :as string]
    [org.httpkit.client :as httpkit]
    [java-time :as t]
-   [jsonista.core :as jsonista]))
+   [jsonista.core :as jsonista]
+   [ring.util.codec :refer [url-encode]]))
+
+(defn atlassian-canonical-query-string
+  "
+  Creates the 'canonical query string' needed to calculate the query string hash.
+  See the official docs in:
+  https://developer.atlassian.com/cloud/bitbucket/query-string-hash/#canonical-query-string
+  "
+  [parameters]
+  ;; according to docs the JWT parameter is ignored if present
+  (let [no-jwt (dissoc parameters :jwt)]
+    (when parameters
+      (->> no-jwt
+         ;; the query parameters must be sorted in ascending order
+           (sort-by first)
+         ;; both keys and values must be url (percent) encoded
+           (map (fn [[k v]] (str
+                             (-> k name url-encode)
+                             "="
+                             (-> v str url-encode))))
+           (interpose "&")
+           (apply str)))))
 
 (defn atlassian-qsh
   "
   Builds the Query String Hash needed for the JWT token.
   https://developer.atlassian.com/cloud/bitbucket/query-string-hash/
+
+  canonical-method: the HTTP method in all-caps e.g. GET or POST
+  canonical-uri:    relative URI path for the Atlassian product or app e.g. / or /issue
+  parameters:       a map of the query parameters from the request, see also 
   "
-  [canonical-method canonical-url params]
-  (-> (str canonical-method "&" canonical-url "&" params)
+  [canonical-method canonical-uri parameters]
+  (-> (str canonical-method "&"
+           canonical-uri "&"
+           (atlassian-canonical-query-string parameters))
       sha256
       bytes->hex))
 
@@ -25,12 +53,12 @@
   "
   Calculates the JWT token for requests sent to Confluence.
   "
-  [descriptor-key shared-secret canonical-method canonical-url & [params]]
+  [descriptor-key shared-secret canonical-method canonical-uri & [params]]
   (let [claims {:iss descriptor-key
                 :iat (-> (t/instant)
                          t/to-millis-from-epoch
                          (quot 1000))
-                :qsh (atlassian-qsh canonical-method canonical-url params)
+                :qsh (atlassian-qsh canonical-method canonical-uri params)
                 :exp (-> (t/instant)
                          (t/plus (t/seconds 9000))
                          t/to-millis-from-epoch

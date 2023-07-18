@@ -8,7 +8,9 @@
    [buddy.sign.jwt :as jwt]
    [clojure.string :as string]
    [clojure.walk :refer [keywordize-keys]]
-   [com.brunobonacci.mulog :as mulog]))
+   [com.brunobonacci.mulog :as mulog]
+   [next.jdbc.sql :as sql]
+   [jcpsantiago.arqivist.api.confluence.utils :as utils]))
 
 ;; Slack middleware ----------------------------------------------------------
 (defn wrap-keep-raw-json-string
@@ -17,8 +19,15 @@
    Needed to verify Slack requests."
   [handler id]
   (fn [request]
-    (mulog/log ::keeping-raw-json-string :middleware-id id :uri (:uri request) :local-time (java.time.LocalDateTime/now))
-    (handler (update request :body slurp))))
+    (if (and (re-find #"slack" (:uri request))
+             (seq (:body request)))
+      (do
+        (mulog/log ::keeping-raw-json-string
+                   :middleware-id id
+                   :uri (:uri request)
+                   :local-time (java.time.LocalDateTime/now))
+        (handler (update request :body slurp)))
+      (handler request))))
 
 (defn slack-headers-present?
   "Checks if the necessary headers to verify a Slack request are present.
@@ -80,21 +89,62 @@
       :request-method (get request :request-method)}
 
      ;; track the request duration and outcome
-     (mulog/trace :io.redefine.datawarp/http-request
+      (mulog/trace :io.redefine.datawarp/http-request
                   ;; add key/value pairs for tracking event only
-                  {:pairs [:content-type     (get-in request [:headers "content-type"])
-                           :content-encoding (get-in request [:headers "content-encoding"])
-                           :middleware       id]
+        {:pairs [:content-type     (get-in request [:headers "content-type"])
+                 :content-encoding (get-in request [:headers "content-encoding"])
+                 :middleware       id]
                    ;; capture http status code from the response
-                   :capture (fn [{:keys [status]}] {:http-status status})}
+         :capture (fn [{:keys [status]}] {:http-status status})}
 
                   ;; call the request handler
-                  (handler request)))))
+        (handler request)))))
 
 ;; Atlassian middleware -----------------------------------------------------
+(defn verify-atlassian-iframe
+  "
+  Middleware to verify the JWT token present in
+  Atlassian iframe requests e.g. for the Get Started page.
+  "
+  [system]
+  (fn
+    [handler _]
+    (fn [request]
+      (let [base-url (str (get-in request [:parameters :query :xdm_e])
+                          (get-in request [:parameters :query :cp]))
+            shared_secret (-> (sql/find-by-keys
+                               (:db-connection system)
+                               :atlassian_tenants
+                               {:base_url base-url}
+                               {:columns [[:shared_secret :shared_secret]]})
+                              first :atlassian_tenants/shared_secret)
+            {:keys [request-method uri] {:keys [query]} :parameters} request
+            incoming-qsh (-> (:jwt query) (jwt/unsign shared_secret) :qsh)
+            calculated-qsh (utils/atlassian-qsh
+                            (string/upper-case (name request-method)) uri query)]
+        (if (= incoming-qsh calculated-qsh)
+          (do
+            (mulog/log ::verify-atlassian-server-request
+                       :base-url base-url
+                       :incoming-qsh incoming-qsh
+                       :calculated-qsh calculated-qsh
+                       :local-time (java.time.LocalDateTime/now))
+            (handler request))
+          (do
+            (mulog/log ::verify-atlassian-server-request
+                       :base-url base-url
+                       :incoming-qsh incoming-qsh
+                       :calculated-qsh calculated-qsh
+                       :success :false
+                       :error "Atlassian JWT is invalid."
+                       :local-time (java.time.LocalDateTime/now))
+            {:status 403 :body "Invalid request"}))))))
+
 (defn verify-atlassian-lifecycle
-  "Middleware to verify the JWT token present in
-  Atlassian lifecycle installed/uninstalled events."
+  "
+  Middleware to verify the JWT token present in
+  Atlassian lifecycle installed/uninstalled events.
+  "
   [handler _]
   (fn [request]
     (let [jwt-token (-> (or (get-in request [:headers "authorization"]) "")
