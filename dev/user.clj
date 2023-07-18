@@ -10,7 +10,7 @@
 ;; - alias included in the Emacs `.dir-locals.el` file
 ;; ---------------------------------------------------------
 
-
+#_{:clj-kondo/ignore [:unused-namespace :unused-referred-var]}
 (ns user
   "Tools for REPL Driven Development"
   (:require
@@ -18,15 +18,13 @@
    [jcpsantiago.arqivist.system :refer [system]]
    [donut.system :as donut]
    [donut.system.repl :as donut-repl]
-   [clojure.tools.namespace.repl :as namespace]
-
-   ;; REPL Workflow
+   [clojure.tools.namespace.repl :refer [set-refresh-dirs]]
+   [portal]  ; launch portal
    [portal.api :as inspect]                          ; Data inspector
 
    ;; Logging
    [com.brunobonacci.mulog :as mulog]                ; Event Logging
-   [mulog-publisher]                                 ; Tap mulog events
-   ))
+   [mulog-events]))                                   ; Global context & Tap publisher
 
 ;; ---------------------------------------------------------
 ;; Help
@@ -72,6 +70,14 @@
 ;; ---------------------------------------------------------
 
 ;; ---------------------------------------------------------
+;; Avoid reloading `dev` code
+;; - code in `dev` directory should be evaluated if changed to reload into repl
+(println
+ "Set REPL refresh directories to "
+ (set-refresh-dirs "src" "resources" "test"))
+;; ---------------------------------------------------------
+
+;; ---------------------------------------------------------
 ;; Starting the system
 (defmethod donut/named-system :donut.system/repl
   [_]
@@ -96,37 +102,14 @@
   (donut-repl/restart))
 
 ;; ---------------------------------------------------------
-;; Start Portal and capture all evaluation results
+;; Mulog event logging
+;; `mulog-publisher` namespace used to launch tap> events to tap-source (portal)
+;; and set global context for all events
 
-;; Open Portal window in browser with dark theme
-;; https://cljdoc.org/d/djblue/portal/0.37.1/doc/ui-concepts/themes
-(inspect/open {:portal.colors/theme :portal.colors/gruvbox})
-;; (inspect/open {:portal.colors/theme :portal.colors/solarized-light})
-
-;; Add portal as a tap> target and listen to all evaluation results (via nREPL)
-(add-tap #'portal.api/submit)
-
-;; ---------------------------------------------------------
-
-;; ---------------------------------------------------------
-;; Mulog events and publishing
-
-;; set event global context - information added to every event for REPL workflow
-(mulog/set-global-context! {:app-name "The Arqivist",
-                            :version "0.1.0", :env "dev"})
-
-(def mulog-tap-publisher
-  "Start mulog custom tap publisher to send all events to Portal
-  and other tap sources
-  `mulog-tap-publisher` to stop publisher"
-  (mulog/start-publisher!
-   {:type :custom, :fqn-function "mulog-publisher/tap"}))
-
-(mulog/log ::emacs-event ::ns (ns-publics *ns*))
-
-;; Stop mulog publisher
-#_mulog-tap-publisher
-
+;; Example mulog event message
+#_(mulog/log ::dev-user-ns
+             :message "Example event from user namespace"
+             :ns (ns-publics *ns*))
 ;; ---------------------------------------------------------
 
 ;; ---------------------------------------------------------
