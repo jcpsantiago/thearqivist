@@ -103,11 +103,11 @@
   (fn [request]
     (let [base-url (str (get-in request [:parameters :query :xdm_e])
                         (get-in request [:parameters :query :cp]))
-          tenant-connected? (-> (sql/find-by-keys 
-                                  (:db-connection system) 
-                                  :atlassian_tenants 
-                                  {:base_url base-url} 
-                                  {:columns [[:id :id]]})
+          tenant-connected? (-> (sql/find-by-keys
+                                 (:db-connection system)
+                                 :atlassian_tenants
+                                 {:base_url base-url}
+                                 {:columns [[:id :id]]})
                                 first :atlassian_tenants/id)]
       (if tenant-connected?
         (-> (get-started-page system base-url) response (content-type "text/html; charset=utf-8"))

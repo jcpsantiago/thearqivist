@@ -34,5 +34,5 @@
 
 (spec/def ::iframe
   (spec/keys
-    :req-un [::xdm_e ::xdm_c ::xdm_deprecated_addon_key_do_not_use 
-             ::lic ::cv ::cp ::jwt]))
+   :req-un [::xdm_e ::xdm_c ::xdm_deprecated_addon_key_do_not_use
+            ::lic ::cv ::cp ::jwt]))

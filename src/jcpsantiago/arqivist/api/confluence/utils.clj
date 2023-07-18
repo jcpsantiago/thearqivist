@@ -23,13 +23,14 @@
   (let [no-jwt (dissoc parameters :jwt)]
     (when parameters
       (->> no-jwt
-         ;; the query parameters must be sorted in ascending order
+           ;; the query parameters must be sorted in ascending order
            (sort-by first)
-         ;; both keys and values must be url (percent) encoded
-           (map (fn [[k v]] (str
-                             (-> k name url-encode)
-                             "="
-                             (-> v str url-encode))))
+           ;; both keys and values must be url (percent) encoded
+           (map (fn [[k v]]
+                  (str
+                   (-> k name url-encode)
+                   "="
+                   (-> v str url-encode))))
            (interpose "&")
            (apply str)))))
 

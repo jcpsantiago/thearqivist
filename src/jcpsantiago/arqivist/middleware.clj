@@ -89,16 +89,16 @@
       :request-method (get request :request-method)}
 
      ;; track the request duration and outcome
-      (mulog/trace :io.redefine.datawarp/http-request
+     (mulog/trace :io.redefine.datawarp/http-request
                   ;; add key/value pairs for tracking event only
-        {:pairs [:content-type     (get-in request [:headers "content-type"])
-                 :content-encoding (get-in request [:headers "content-encoding"])
-                 :middleware       id]
+                  {:pairs [:content-type     (get-in request [:headers "content-type"])
+                           :content-encoding (get-in request [:headers "content-encoding"])
+                           :middleware       id]
                    ;; capture http status code from the response
-         :capture (fn [{:keys [status]}] {:http-status status})}
+                   :capture (fn [{:keys [status]}] {:http-status status})}
 
                   ;; call the request handler
-        (handler request)))))
+                  (handler request)))))
 
 ;; Atlassian middleware -----------------------------------------------------
 (defn verify-atlassian-iframe
@@ -107,8 +107,7 @@
   Atlassian iframe requests e.g. for the Get Started page.
   "
   [system]
-  (fn
-    [handler _]
+  (fn [handler _]
     (fn [request]
       (let [base-url (str (get-in request [:parameters :query :xdm_e])
                           (get-in request [:parameters :query :cp]))
