@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#35](https://github.com/jcpsantiago/thearqivist/issues/35) Add Slack request verification middleware
 * Refactor PR #38, improve readability of Slack middleware
 * dev: refactor user namespace removing reloading of mulog publisher and portal
+* [#43](https://github.com/jcpsantiago/thearqivist/issues/43) Add Confluence Get started page
 
 ## 0.1.0 - 2023-04-20
 
