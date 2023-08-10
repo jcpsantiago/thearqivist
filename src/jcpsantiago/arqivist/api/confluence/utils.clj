@@ -17,49 +17,53 @@
   Creates the 'canonical query string' needed to calculate the query string hash.
   See the official docs in:
   https://developer.atlassian.com/cloud/bitbucket/query-string-hash/#canonical-query-string
-  "
-  [parameters]
-  ;; according to docs the JWT parameter is ignored if present
-  (let [no-jwt (dissoc parameters :jwt)]
-    (when parameters
-      (->> no-jwt
-           ;; the query parameters must be sorted in ascending order
-           (sort-by first)
-           ;; both keys and values must be url (percent) encoded
-           (map (fn [[k v]]
-                  (str
-                   (-> k name url-encode)
-                   "="
-                   (-> v str url-encode))))
-           (interpose "&")
-           (apply str)))))
-
-(defn atlassian-query-string-hash
-  "
-  Builds the Query String Hash needed for the JWT token.
-  https://developer.atlassian.com/cloud/bitbucket/query-string-hash/
 
   canonical-method: the HTTP method in all-caps e.g. GET or POST
   canonical-uri:    relative URI path for the Atlassian product or app e.g. / or /issue
-  parameters:       a map of the query parameters from the request, see also 
+  parameters:       a map of the query parameters from the request
   "
   [canonical-method canonical-uri parameters]
-  (-> (str canonical-method "&"
-           canonical-uri "&"
-           (atlassian-canonical-query-string parameters))
-      sha256
-      bytes->hex))
+  ;; according to docs the JWT parameter is ignored if present
+  (let [no-jwt (dissoc parameters :jwt)]
+    (str
+     canonical-method "&"
+     canonical-uri "&"
+     (when parameters
+       (->> no-jwt
+            ;; the query parameters must be sorted in ascending order
+            (sort-by first)
+            ;; both keys and values must be url (percent) encoded
+            (map (fn [[k v]]
+                   (str
+                    (-> k name url-encode)
+                    "="
+                    (-> v str url-encode))))
+            (interpose "&")
+            (apply str))))))
+
+(defn atlassian-query-string-hash
+  "
+  Calculates the Query String Hash needed for the JWT token.
+  https://developer.atlassian.com/cloud/bitbucket/query-string-hash/
+  
+  canonical-query-string: a string like POST&/rest/api/2/issue&foo=bar
+  See also atlassian-canonical-query-string fn.
+  "
+  [canonical-query-string]
+  (-> canonical-query-string sha256 bytes->hex))
 
 (defn atlassian-jwt
   "
   Calculates the JWT token for requests sent to Confluence.
   "
   [descriptor-key shared-secret canonical-method canonical-uri & [params]]
+  ;; FIXME: replace fns from java-time with something else (java-time is deprecated)
   (let [claims {:iss descriptor-key
                 :iat (-> (t/instant)
                          t/to-millis-from-epoch
                          (quot 1000))
-                :qsh (atlassian-query-string-hash canonical-method canonical-uri params)
+                :qsh (-> (atlassian-canonical-query-string canonical-method canonical-uri params)
+                         atlassian-query-string-hash)
                 :exp (-> (t/instant)
                          (t/plus (t/seconds 9000))
                          t/to-millis-from-epoch
