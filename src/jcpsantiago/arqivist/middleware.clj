@@ -119,7 +119,7 @@
                               first :atlassian_tenants/shared_secret)
             {:keys [request-method uri] {:keys [query]} :parameters} request
             incoming-qsh (-> (:jwt query) (jwt/unsign shared_secret) :qsh)
-            calculated-qsh (utils/atlassian-qsh
+            calculated-qsh (utils/atlassian-query-string-hash
                             (string/upper-case (name request-method)) uri query)]
         (if (= incoming-qsh calculated-qsh)
           (do
