@@ -22,11 +22,18 @@
 ;; Mulog event publishing
 
 (deftype TapPublisher
-         [buffer transform]
+  [buffer transform]
+
   com.brunobonacci.mulog.publisher.PPublisher
+
   (agent-buffer [_] buffer)
+
+
   (publish-delay [_] 200)
-  (publish [_ buffer]
+
+
+  (publish
+    [_ buffer]
     (doseq [item (transform (map second (mulog-buffer/items buffer)))]
       (tap> item))
     (mulog-buffer/clear buffer)))

@@ -3,6 +3,7 @@
   (:require
    [jcpsantiago.arqivist.middleware :as middleware-arqivist]
    [jcpsantiago.arqivist.api.confluence.handlers :as handlers]
+   [jcpsantiago.arqivist.api.confluence.pages :as pages]
    [jcpsantiago.arqivist.api.confluence.specs :as specs]))
 
 (defn routes
@@ -28,8 +29,6 @@
       :description ""
       :handler (handlers/app-descriptor-json system)}}]
 
-   ;; FIXME: These routes need different kind of validation than the non-lifecycle routes
-   ;; https://developer.atlassian.com/cloud/confluence/security-for-connect-apps/#validating-installation-lifecycle-requests
    ["/installed"
     {:middleware [[middleware-arqivist/verify-atlassian-lifecycle :verify-atlassian-jwt]]
      :post
@@ -62,4 +61,6 @@
      {:summary "App's 'Get-started' page in Confluence"
       :description "Serves the 'Get-started' page shown after the app is installed in Confluence. The page is rendered in an iframe, and contains a button to let the use connect their Slack workspace."
       :responses {200 {:body string?}}
-      :handler {:status 200 :body "HELLO!"}}}]])
+      :middleware [[(middleware-arqivist/verify-atlassian-iframe system) :verify-atlassian-jwt]]
+      :parameters {:query ::specs/iframe}
+      :handler (pages/get-started-handler system)}}]])
