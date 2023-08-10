@@ -34,7 +34,7 @@
            (interpose "&")
            (apply str)))))
 
-(defn atlassian-qsh
+(defn atlassian-query-string-hash
   "
   Builds the Query String Hash needed for the JWT token.
   https://developer.atlassian.com/cloud/bitbucket/query-string-hash/
@@ -59,7 +59,7 @@
                 :iat (-> (t/instant)
                          t/to-millis-from-epoch
                          (quot 1000))
-                :qsh (atlassian-qsh canonical-method canonical-uri params)
+                :qsh (atlassian-query-string-hash canonical-method canonical-uri params)
                 :exp (-> (t/instant)
                          (t/plus (t/seconds 9000))
                          t/to-millis-from-epoch
