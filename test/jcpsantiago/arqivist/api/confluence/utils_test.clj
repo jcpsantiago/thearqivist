@@ -1,5 +1,5 @@
 (ns jcpsantiago.arqivist.api.confluence.utils-test
-  (:require [clojure.test :refer [are is deftest testing]]
+  (:require [clojure.test :refer [are deftest testing]]
             [jcpsantiago.arqivist.api.confluence.utils :as utils]))
 
 (deftest atlassian-canonical-query-string-test
