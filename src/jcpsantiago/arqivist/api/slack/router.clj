@@ -11,7 +11,8 @@
    * slash    — triggered after the user uses the `/arqive` slash command
    * redirect — called as part of the OAuth process at the end of installation"
   [system]
-  (let [wrap-verify-slack-request (partial middleware-arqivist/wrap-verify-slack-request (:slack-env system))]
+  (let [wrap-verify-slack-request (partial middleware-arqivist/wrap-verify-slack-request (:slack-env system))
+        wrap-add-slack-team-attributes (partial middleware-arqivist/wrap-add-slack-team-attributes (:db-connection system))]
     ["/slack"
      {:swagger {:tags ["Slack"]}}
      ["/shortcut"
@@ -32,14 +33,15 @@
       {:swagger {:externalDocs
                  {:description "Slack docs about Slash Commands"
                   :url "https://api.slack.com/interactivity/slash-commands"}}
-       :middleware [[wrap-verify-slack-request :verify-slack-request]]
+       :middleware [[wrap-verify-slack-request :verify-slack-request]
+                    [wrap-add-slack-team-attributes :add-slack-team-attributes]]
        :post
        {:summary "Target for Slash Command interactions"
         :description "This endpoint receives all interactions initiated by typing the `/arqive` slash command."
         :parameters {:header ::specs/request-header-attributes
                      :form ::specs/slash-form-params}
         :responses {200 {:body string?}}
-        :handler handlers/slash-command}}]
+        :handler (handlers/slash-command system)}}]
 
      ["/redirect"
       {:swagger {:externalDocs
