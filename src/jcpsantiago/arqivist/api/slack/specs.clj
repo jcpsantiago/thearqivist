@@ -116,6 +116,16 @@
   (spec/keys
    :req-un [::type ::team ::user ::view]))
 
+
+;; Header parameters -------------------------------------------------------
+;; Used to verify Slack requests
+(spec/def ::x-slack-request-timestamp integer?)
+(spec/def ::x-slack-signature non-blank-string?)
+
+(spec/def ::request-header-attributes
+  (spec/keys
+   :req-un [::x-slack-signature ::x-slack-request-timestamp]))
+
 ;; Internal representations ------------------------------------------------
 (spec/def ::uuid string?)
 (spec/def ::external_team_id string?)
