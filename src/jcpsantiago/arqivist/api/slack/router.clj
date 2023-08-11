@@ -36,8 +36,8 @@
        :post
        {:summary "Target for Slash Command interactions"
         :description "This endpoint receives all interactions initiated by typing the `/arqive` slash command."
-        ;; TODO: add the rest of the specs, not working yet
-        ;; :parameters {:form :jcpsantiago.arqivist.api.slack.spec/slash-form-params}
+        :parameters {:header ::specs/request-header-attributes
+                     :form ::specs/slash-form-params}
         :responses {200 {:body string?}}
         :handler handlers/slash-command}}]
 
