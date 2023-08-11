@@ -6,6 +6,7 @@
    [buddy.core.keys :as keys]
    [buddy.sign.jws :as jws]
    [buddy.sign.jwt :as jwt]
+   [clojure.spec.alpha :as spec]
    [clojure.string :as string]
    [clojure.walk :refer [keywordize-keys]]
    [com.brunobonacci.mulog :as mulog]
