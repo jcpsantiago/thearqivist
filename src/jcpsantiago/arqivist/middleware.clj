@@ -73,12 +73,6 @@
                      :local-time (java.time.LocalDateTime/now))
           {:status 403 :body "Invalid credentials provided"})))))
 
-(defn wrap-add-slack-team-attributes
-  "
-  Ring middleware to add slack team credentials needed to use the Slack API.
-  Every Slack interaction needs this, except for the /redirect endpoints
-  which is called during installation.
-  "
 ;; Logging middleware -----------------------------------------------------
 ;; https://github.com/BrunoBonacci/mulog/blob/master/doc/ring-tracking.md
 (defn wrap-trace-events
