@@ -141,7 +141,7 @@
 
 (spec/def ::team-attributes
   (spec/keys
-   :req [:slack_teams/:id :slack_teams/:uuid :slack_teams/:app_id 
-         :slack_teams/:external_team_id :slack_teams/:team_name 
-         :slack_teams/:registering_user :slack_teams/:scopes :slack_teams/:access_token 
+   :req [:slack_teams/:id :slack_teams/:uuid :slack_teams/:app_id
+         :slack_teams/:external_team_id :slack_teams/:team_name
+         :slack_teams/:registering_user :slack_teams/:scopes :slack_teams/:access_token
          :slack_teams/:bot_user_id :slack_teams/:created_at :slack_teams/:atlassian_tenant_id]))
