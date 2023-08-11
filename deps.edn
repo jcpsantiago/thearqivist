@@ -32,7 +32,9 @@
   metosin/jsonista {:mvn/version "0.3.7"}
 
   ;; Slack
-  org.julienxx/clj-slack {:mvn/version "0.8.0"}
+  io.github.jcpsantiago/clj-slack {:git/sha "edd8af9" :git/tag "0.8.1"}
+  ;; not using this until they merge the PR updating the OAuth method
+  ;; org.julienxx/clj-slack {:mvn/version "0.8.0"}
 
   ;; Webpages
   hiccup/hiccup {:mvn/version "2.0.0-alpha2"}}
