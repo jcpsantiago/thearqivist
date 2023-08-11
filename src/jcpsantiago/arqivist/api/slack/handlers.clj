@@ -1,33 +1,14 @@
 (ns jcpsantiago.arqivist.api.slack.handlers
   "Ring handlers and support functions for Slack requests."
   (:require
+   [clj-slack.oauth :as clj-slack]
    [clojure.spec.alpha :as spec]
    [com.brunobonacci.mulog :as mulog]
-   [org.httpkit.client :as httpkit]
    [jcpsantiago.arqivist.api.slack.pages :as pages]
    [jcpsantiago.arqivist.api.slack.specs :as specs]
    [jcpsantiago.arqivist.api.slack.utils :as utils]
-   [jsonista.core :as jsonista]
    [next.jdbc.sql :as sql]
    [ring.util.response :refer [response content-type]]))
-
-;; TODO: move to utils/slack-api namespace
-(defn oauth-access!
-  "
-  Sends a POST request to the oauth.v2.access Slack method.
-  The response is documented in https://api.slack.com/authentication/oauth-v2#exchanging,
-  and in the slack.specs namespace.
-
-  Takes a map of form parameters with shape
-
-  {:form-params {:code <temporary auth code>}
-   :basic-auth [<slack client id>
-                <slack client secret>]}
-
-  Returns a promise.
-  "
-  [form-params]
-  (httpkit/post "https://slack.com/api/oauth.v2.access" form-params))
 
 (defn message-action-handler
   "Handles requests sent to /slack/shortcut with type `message_action`"
@@ -66,10 +47,14 @@
 
 (defn slash-command
   "Handler function for /slack/slash route"
-  [_]
-  (mulog/log ::handling-slack-slash-command
-             :local-time (java.time.LocalDateTime/now))
-  {:status 200 :body "" :headers {}})
+  [system]
+  (fn [{{{:keys [text response_url]} :form} :parameters :as request}]
+    (mulog/log ::handling-slack-slash-command
+               :text text
+               :local-time (java.time.LocalDateTime/now))
+    (case text
+      "help" (response "")
+      :else (response "nothing to see here"))))
 
 ;; ------------------------------------------------------
 ;; Handler for OAuth redirection, installation in Slack
@@ -82,22 +67,20 @@
   [system]
   (fn [request]
     (mulog/log ::oauth-redirect :local-time (java.time.LocalDateTime/now))
-    (let [db-connection (:db-connection system)
-          slack-env (:slack-env system)
+    (let [{:keys [db-connection slack-env]} system
+          {:keys [client-id client-secret redirect-uri]} slack-env
           {:keys [code state]} (get-in request [:parameters :query])
-          {:keys [:atlassian_tenants/tenant_id]} (-> (sql/find-by-keys
-                                                      db-connection
-                                                      :atlassian_tenants
-                                                      {:base_url state}
-                                                      {:columns [[:id :tenant_id]]})
-                                                     first)
+          {:keys [:atlassian_tenants/tenant_id]} (sql/get-by-id
+                                                  db-connection
+                                                  :atlassian_tenants
+                                                  state
+                                                  :base_url
+                                                  {:columns [[:id :tenant_id]]})
 
-          token-response (-> @(oauth-access!
-                               {:form-params {:code code}
-                                :basic-auth [(:client-id slack-env)
-                                             (:client-secret slack-env)]})
-                             :body
-                             (jsonista/read-value jsonista/keyword-keys-object-mapper))]
+          token-response (clj-slack/access
+                          ;; there is no token yet, and this API call ignores it
+                          {:api-url "https://slack.com/api" :token ""}
+                          client-id client-secret code redirect-uri)]
 
       (cond
         ;; In case someone gets the "Add to Slack" link without installing in Confluence first
