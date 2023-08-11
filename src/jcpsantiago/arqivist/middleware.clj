@@ -10,7 +10,8 @@
    [clojure.walk :refer [keywordize-keys]]
    [com.brunobonacci.mulog :as mulog]
    [next.jdbc.sql :as sql]
-   [jcpsantiago.arqivist.api.confluence.utils :as utils]))
+   [jcpsantiago.arqivist.api.confluence.utils :as utils]
+   [jcpsantiago.arqivist.api.slack.specs :as specs]))
 
 ;; Slack middleware ----------------------------------------------------------
 (defn wrap-keep-raw-json-string
@@ -76,6 +77,35 @@
                               "The necessary Slack headers are missing")
                      :local-time (java.time.LocalDateTime/now))
           {:status 403 :body "Invalid credentials provided"})))))
+
+
+(defn wrap-add-slack-team-attributes
+  "
+  Ring middleware to add slack team credentials needed to use the Slack API.
+  Every Slack interaction needs this, except for the /redirect endpoints
+  which is called during installation.
+  "
+  [db-connection handler _]
+  (fn [request]
+    (try
+      (let [slack-team-attributes (->> (sql/get-by-id db-connection :slack_teams
+                                                      (get-in request [:parameters :form :team_id])
+                                                      :external_team_id {})
+                                       (spec/conform ::specs/team-attributes))
+            ;; for use in clj-slack's functions, see https://github.com/julienXX/clj-slack
+            slack-connection {:api-url "https://slack.com/api"
+                              :token (:slack_teams/access_token slack-team-attributes)}]
+        (-> request
+            (assoc :slack-team-attributes slack-team-attributes)
+            (assoc :slack-connection slack-connection)
+            handler))
+
+      (catch Exception e
+        (mulog/log ::add-slack-team-attributes
+                   :success :false
+                   :error (.getMessage e)
+                   :local-time (java.time.LocalDateTime/now))))))
+
 
 ;; Logging middleware -----------------------------------------------------
 ;; https://github.com/BrunoBonacci/mulog/blob/master/doc/ring-tracking.md
