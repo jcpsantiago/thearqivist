@@ -35,11 +35,14 @@
 (defn from-slack?
   "Verifies if the request really came from Slack.
   https://api.slack.com/authentication/verifying-requests-from-slack"
-  [slack-env timestamp payload slack-signature]
+  [signing-secret timestamp payload slack-signature]
   (try
+    (assert signing-secret "Slack signing secret is missing, check env vars in the donut system!")
+
     (mac/verify (str "v0:" timestamp ":" payload)
                 (codecs/hex->bytes slack-signature)
-                {:key (:arqivist-slack-signing-secret slack-env) :alg :hmac+sha256})
+                {:key signing-secret :alg :hmac+sha256})
+
     (catch
      Exception e
       (mulog/log ::verify-mac-hash
@@ -71,6 +74,12 @@
                      :local-time (java.time.LocalDateTime/now))
           {:status 403 :body "Invalid credentials provided"})))))
 
+(defn wrap-add-slack-team-attributes
+  "
+  Ring middleware to add slack team credentials needed to use the Slack API.
+  Every Slack interaction needs this, except for the /redirect endpoints
+  which is called during installation.
+  "
 ;; Logging middleware -----------------------------------------------------
 ;; https://github.com/BrunoBonacci/mulog/blob/master/doc/ring-tracking.md
 (defn wrap-trace-events
