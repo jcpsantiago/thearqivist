@@ -22,6 +22,7 @@
 (spec/def ::id string?)
 (spec/def ::name string?)
 (spec/def ::token_type #{"bot" "user"})
+(spec/def ::text string?)
 
 ;; Error response
 (spec/def ::ok boolean?)
@@ -82,11 +83,23 @@
 ;; &user_id=U2147483697
 ;; &user_name=Steve
 ;; token=<alphanumerical string>
+(spec/def ::api_app_id string?)
+(spec/def ::trigger_id string?)
+(spec/def ::command non-blank-string?)
+(spec/def ::channel_id string?)
+(spec/def ::token string?)
+(spec/def ::channel_name string?)
+(spec/def ::user_id non-blank-string?)
+(spec/def ::user_name string?)
+(spec/def ::team_id string?)
+(spec/def ::team_domain string?)
+(spec/def ::response_url string?)
+(spec/def ::text string?)
+
 (spec/def ::slash-form-params
   (spec/keys
-   :req-un [::api_app_id ::trigger_id ::command ::channel_id ::token
-            ::channel_name ::user_id ::is_enterprise_install ::team_id
-            ::user_name ::team_domain ::response_url ::text]))
+   :req-un [::api_app_id ::trigger_id ::command ::channel_id ::token ::user_name
+            ::channel_name ::user_id ::team_id ::team_domain ::response_url ::text]))
 
 (spec/def ::shortcut-body
   (spec/keys
@@ -104,7 +117,16 @@
    :req-un [::type ::team ::user ::view]))
 
 ;; Internal representations ------------------------------------------------
+(spec/def ::uuid string?)
+(spec/def ::external_team_id string?)
+(spec/def ::team_name string?)
+(spec/def ::registering_user string?)
+(spec/def ::scopes string?)
+(spec/def ::access_token string?)
+(spec/def ::created_at string?)
+(spec/def ::atlassian_tenant_id integer?)
+
 (spec/def ::team-attributes
   (spec/keys
    :req-un [::id ::uuid ::app_id ::external_team_id ::team_name ::registering_user
-            ::scopes ::access_token ::bot_user_id ::created_at]))
+            ::scopes ::access_token ::bot_user_id ::created_at ::atlassian_tenant_id]))
