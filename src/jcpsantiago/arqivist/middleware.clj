@@ -6,6 +6,7 @@
    [buddy.core.keys :as keys]
    [buddy.sign.jws :as jws]
    [buddy.sign.jwt :as jwt]
+   [clojure.spec.alpha :as spec]
    [clojure.string :as string]
    [clojure.walk :refer [keywordize-keys]]
    [com.brunobonacci.mulog :as mulog]
@@ -19,22 +20,17 @@
    Needed to verify Slack requests."
   [handler id]
   (fn [request]
-    (if (and (re-find #"slack" (:uri request))
-             (seq (:body request)))
-      (do
-        (mulog/log ::keeping-raw-json-string
-                   :middleware-id id
-                   :uri (:uri request)
-                   :local-time (java.time.LocalDateTime/now))
-        (handler (update request :body slurp)))
-      (handler request))))
-
-(defn slack-headers-present?
-  "Checks if the necessary headers to verify a Slack request are present.
-   Used as a helper in error messages."
-  [headers]
-  (let [keywordized-headers (keywordize-keys headers)]
-    (every? #(contains? keywordized-headers %) [:x-slack-request-timestamp :x-slack-signature])))
+    (let [raw-body (slurp (:body request))
+          request' (-> request
+                       (assoc :raw-body raw-body)
+                       (assoc :body (-> raw-body
+                                        (.getBytes "UTF-8")
+                                        java.io.ByteArrayInputStream.)))]
+      (mulog/log ::keeping-raw-json-string
+                 :middleware-id id
+                 :uri (:uri request)
+                 :local-time (java.time.LocalDateTime/now))
+      (handler request'))))
 
 (defn from-slack?
   "Verifies if the request really came from Slack.
@@ -57,13 +53,13 @@
    See official docs https://api.slack.com/authentication/verifying-requests-from-slack"
   [slack-env handler id]
   (fn [request]
-    (let [headers (:headers request)
-          {:keys [x-slack-signature x-slack-request-timestamp]} headers
-          slack-signature (string/replace (or x-slack-signature "") #"v0=" "")
-          valid-slack-request?  (from-slack? slack-env
-                                             x-slack-request-timestamp
-                                             (:body request)
-                                             slack-signature)]
+    (let [{:keys [x-slack-signature x-slack-request-timestamp]} (get-in request [:parameters :header])
+          ;; NOTE: clojure spec ensures x-slack-signature is non-blank
+          slack-signature (string/replace x-slack-signature #"v0=" "")
+          valid-slack-request? (from-slack? (:signing-secret slack-env)
+                                            x-slack-request-timestamp
+                                            (:raw-body request)
+                                            slack-signature)]
       (if valid-slack-request?
         (do
           (mulog/log ::verify-slack-request :middleware-id id :success :true
@@ -71,9 +67,7 @@
           (handler request))
         (do
           (mulog/log ::verify-slack-request :middleware-id id :success :false
-                     :error (if (slack-headers-present? headers)
-                              "The request is not from Slack"
-                              "The necessary Slack headers are missing")
+                     :error "The request is not from Slack"
                      :local-time (java.time.LocalDateTime/now))
           {:status 403 :body "Invalid credentials provided"})))))
 
