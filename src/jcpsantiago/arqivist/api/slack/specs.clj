@@ -127,16 +127,21 @@
    :req-un [::x-slack-signature ::x-slack-request-timestamp]))
 
 ;; Internal representations ------------------------------------------------
-(spec/def ::uuid string?)
-(spec/def ::external_team_id string?)
-(spec/def ::team_name string?)
-(spec/def ::registering_user string?)
-(spec/def ::scopes string?)
-(spec/def ::access_token string?)
-(spec/def ::created_at string?)
-(spec/def ::atlassian_tenant_id integer?)
+(spec/def :slack_teams/:id pos-int?)
+(spec/def :slack_teams/:uuid uuid?)
+(spec/def :slack_teams/:app_id string?)
+(spec/def :slack_teams/:external_team_id string?)
+(spec/def :slack_teams/:team_name string?)
+(spec/def :slack_teams/:registering_user string?)
+(spec/def :slack_teams/:scopes string?)
+(spec/def :slack_teams/:access_token string?)
+(spec/def :slack_teams/:bot_user_id string?)
+(spec/def :slack_teams/:created_at inst?)
+(spec/def :slack_teams/:atlassian_tenant_id pos-int?)
 
 (spec/def ::team-attributes
   (spec/keys
-   :req-un [::id ::uuid ::app_id ::external_team_id ::team_name ::registering_user
-            ::scopes ::access_token ::bot_user_id ::created_at ::atlassian_tenant_id]))
+   :req [:slack_teams/:id :slack_teams/:uuid :slack_teams/:app_id 
+         :slack_teams/:external_team_id :slack_teams/:team_name 
+         :slack_teams/:registering_user :slack_teams/:scopes :slack_teams/:access_token 
+         :slack_teams/:bot_user_id :slack_teams/:created_at :slack_teams/:atlassian_tenant_id]))
