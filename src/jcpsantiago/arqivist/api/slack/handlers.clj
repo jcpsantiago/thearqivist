@@ -51,9 +51,9 @@
 (defn help-message
   []
   (-> (ui/help-message)
-         json/write-value-as-string
-         response
-         (content-type "application/json")))
+      json/write-value-as-string
+      response
+      (content-type "application/json")))
 
 (defn slash-command
   "Handler function for /slack/slash route"
