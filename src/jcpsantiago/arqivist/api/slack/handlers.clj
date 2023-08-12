@@ -4,9 +4,12 @@
    [clj-slack.oauth :as clj-slack]
    [clojure.spec.alpha :as spec]
    [com.brunobonacci.mulog :as mulog]
+   [org.httpkit.client :as httpkit]
+   [jcpsantiago.arqivist.api.slack.ui-blocks :as ui]
    [jcpsantiago.arqivist.api.slack.pages :as pages]
    [jcpsantiago.arqivist.api.slack.specs :as specs]
    [jcpsantiago.arqivist.api.slack.utils :as utils]
+   [jsonista.core :as json]
    [next.jdbc.sql :as sql]
    [ring.util.response :refer [response content-type]]))
 
@@ -45,6 +48,13 @@
 ;; ------------------------------------------------------
 ;; Handlers for Slack Slash commands
 
+(defn help-message
+  []
+  (-> (ui/help-message)
+         json/write-value-as-string
+         response
+         (content-type "application/json")))
+
 (defn slash-command
   "Handler function for /slack/slash route"
   [system]
@@ -53,8 +63,8 @@
                :text text
                :local-time (java.time.LocalDateTime/now))
     (case text
-      "help" (response "")
-      :else (response "nothing to see here"))))
+      "help" (help-message)
+      (response "HELLOOOOO"))))
 
 ;; ------------------------------------------------------
 ;; Handler for OAuth redirection, installation in Slack
