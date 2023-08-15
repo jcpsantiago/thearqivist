@@ -4,7 +4,6 @@
    [clj-slack.oauth :as clj-slack]
    [clojure.spec.alpha :as spec]
    [com.brunobonacci.mulog :as mulog]
-   [org.httpkit.client :as httpkit]
    [jcpsantiago.arqivist.api.slack.ui-blocks :as ui]
    [jcpsantiago.arqivist.api.slack.pages :as pages]
    [jcpsantiago.arqivist.api.slack.specs :as specs]
