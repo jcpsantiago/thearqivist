@@ -71,7 +71,7 @@
   See j.a.a.s.specs ns for the request spec. 
   "
   [_]
-  (fn [{{{:keys [text]} :form} :parameters :as request}]
+  (fn [{{{:keys [text]} :form} :parameters}]
     (mulog/log ::handling-slack-slash-command
                :text text
                :local-time (java.time.LocalDateTime/now))
