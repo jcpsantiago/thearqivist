@@ -28,11 +28,6 @@
      {:type "mrkdwn",
       :text
       "*Use the _Archive thread_ action.* If you want to save a message thread as a Confluence page, select `Archive thread` in a message's context menu."}}
-    {:type "image",
-     :title {:type "plain_text", :text "image1", :emoji true},
-     :image_url
-     "https://api.slack.com/img/blocks/bkb_template_images/onboardingComplex.jpg",
-     :alt_text "image1"}
     {:type "divider"}
     {:type "context",
      :elements

@@ -45,10 +45,17 @@
    :body ""
    :headers {}})
 
+;;
 ;; ------------------------------------------------------
 ;; Handlers for Slack Slash commands
+;;
 
 (defn help-message
+  "
+  Creates a response with information on how to use The Arqivist.
+  Meant as the response to the `/arqive help` slash command + option,
+  as well as other interactions where the user must be reminded of how to use the app.
+  "
   []
   (-> (ui/help-message)
       json/write-value-as-string
@@ -56,18 +63,41 @@
       (content-type "application/json")))
 
 (defn slash-command
-  "Handler function for /slack/slash route"
-  [system]
-  (fn [{{{:keys [text response_url]} :form} :parameters :as request}]
+  "
+  Handler function for /slack/slash route.
+  This is the main entrypoint to the app's functionality.
+
+  Users will type `/arqive [options]` in Slack.
+  See j.a.a.s.specs ns for the request spec. 
+  "
+  [_]
+  (fn [{{{:keys [text]} :form} :parameters :as request}]
     (mulog/log ::handling-slack-slash-command
                :text text
                :local-time (java.time.LocalDateTime/now))
-    (case text
-      "help" (help-message)
-      (response "HELLOOOOO"))))
+    (let [first-word (re-find #"^\w+" text)]
+      ;; TODO: respond to empty `text` with a modal containing various options
+      (case first-word
+        "help" (help-message)
+        ;; TODO: add jobs handler
+        ;; "jobs" (list-jobs)
+        ;; TODO: add save once handler
+        ;; "once" (save-to-confluence request)
+        ;; TODO: add stop saving job handler
+        ;; "stop" (drop-job request)
+        ;; TODO: add save daily, etc job handler
+        ;; "daily" (save-continously request)
+        ;; TODO: add changelog handler
+        ;; "changelog" (changelog)
+        ;; TODO: if no match, respond with help message but explain there were no known keywords
+        (response (str "I'm sorry but I don't know what"
+                       " `" text "` " "means :sweat_smile:\nCheck the available commands with "
+                       "`/arqive help`"))))))
 
+;;
 ;; ------------------------------------------------------
 ;; Handler for OAuth redirection, installation in Slack
+;;
 ;; TODO: Add alerting system on errors
 (defn oauth-redirect
   "
