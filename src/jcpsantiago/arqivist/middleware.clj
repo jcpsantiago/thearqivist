@@ -6,10 +6,12 @@
    [buddy.core.keys :as keys]
    [buddy.sign.jws :as jws]
    [buddy.sign.jwt :as jwt]
+   [clojure.spec.alpha :as spec]
    [clojure.string :as string]
    [com.brunobonacci.mulog :as mulog]
    [next.jdbc.sql :as sql]
-   [jcpsantiago.arqivist.api.confluence.utils :as utils]))
+   [jcpsantiago.arqivist.api.confluence.utils :as utils]
+   [jcpsantiago.arqivist.api.slack.specs :as specs]))
 
 ;; Slack middleware ----------------------------------------------------------
 (defn wrap-keep-raw-json-string
@@ -18,17 +20,20 @@
    Needed to verify Slack requests."
   [handler id]
   (fn [request]
-    (let [raw-body (slurp (:body request))
-          request' (-> request
-                       (assoc :raw-body raw-body)
-                       (assoc :body (-> raw-body
-                                        (.getBytes "UTF-8")
-                                        java.io.ByteArrayInputStream.)))]
-      (mulog/log ::keeping-raw-json-string
-                 :middleware-id id
-                 :uri (:uri request)
-                 :local-time (java.time.LocalDateTime/now))
-      (handler request'))))
+    (if (and (:body request) (re-find #"slack" (:uri request)))
+      (let [raw-body (slurp (:body request))
+            request' (-> request
+                         (assoc :raw-body raw-body)
+                         (assoc :body (-> raw-body
+                                          (.getBytes "UTF-8")
+                                          java.io.ByteArrayInputStream.)))]
+        (mulog/log ::keeping-raw-json-string
+                   :middleware-id id
+                   :uri (:uri request)
+                   :local-time (java.time.LocalDateTime/now))
+        (handler request'))
+      ;; not a slack route with a body
+      (handler request))))
 
 (defn from-slack?
   "Verifies if the request really came from Slack.
@@ -71,6 +76,35 @@
                      :error "The request is not from Slack"
                      :local-time (java.time.LocalDateTime/now))
           {:status 403 :body "Invalid credentials provided"})))))
+
+
+(defn wrap-add-slack-team-attributes
+  "
+  Ring middleware to add slack team credentials needed to use the Slack API.
+  Every Slack interaction needs this, except for the /redirect endpoints
+  which is called during installation.
+  "
+  [db-connection handler _]
+  (fn [request]
+    (try
+      (let [slack-team-attributes (->> (sql/get-by-id db-connection :slack_teams
+                                                      (get-in request [:parameters :form :team_id])
+                                                      :external_team_id {})
+                                       (spec/conform ::specs/team-attributes))
+            ;; for use in clj-slack's functions, see https://github.com/julienXX/clj-slack
+            slack-connection {:api-url "https://slack.com/api"
+                              :token (:slack_teams/access_token slack-team-attributes)}]
+        (-> request
+            (assoc :slack-team-attributes slack-team-attributes)
+            (assoc :slack-connection slack-connection)
+            handler))
+
+      (catch Exception e
+        (mulog/log ::add-slack-team-attributes
+                   :success :false
+                   :error (.getMessage e)
+                   :local-time (java.time.LocalDateTime/now))))))
+
 
 ;; Logging middleware -----------------------------------------------------
 ;; https://github.com/BrunoBonacci/mulog/blob/master/doc/ring-tracking.md

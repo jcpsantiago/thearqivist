@@ -103,40 +103,46 @@
 
   ;; TODO:
   ;; * Add tasks with chime as task scheduler (using channels?)
+  ;; * Add step to ensure critical env vars are not set/empty strings
 
-  {::donut/defs
-   {;; Environmental variables
-    :env {:atlassian {:vendor-name (or (System/getenv "ARQIVIST_VENDOR_NAME") "burstingburrito")
-                      :vendor-url (or (System/getenv "ARQIVIST_VENDOR_URL") "https://burstingburrito.com")
-                      :base-url (or (System/getenv "ARQIVIST_BASE_URL") (ngrok-tunnel-url))
-                      :descriptor-key (or (System/getenv "ARQIVIST_ATLASSIAN_DESCRIPTOR_KEY") "thearqivist-dev")
-                      :space-key (or (System/getenv "ARQIVIST_CONFLUENCE_SPACE_KEY") "ARQIVISTSTORE")}
+  (let [slack-redirect-uri (or (System/getenv "ARQIVIST_SLACK_REDIRECT_URI")
+                               (str (ngrok-tunnel-url) "/api/v1/slack/redirect"))]
+    {::donut/defs
+     {;; Environmental variables
+      :env {:atlassian {:vendor-name (or (System/getenv "ARQIVIST_VENDOR_NAME") "burstingburrito")
+                        :vendor-url (or (System/getenv "ARQIVIST_VENDOR_URL") "https://burstingburrito.com")
+                        :base-url (or (System/getenv "ARQIVIST_BASE_URL") (ngrok-tunnel-url))
+                        :descriptor-key (or (System/getenv "ARQIVIST_ATLASSIAN_DESCRIPTOR_KEY") "thearqivist-dev")
+                        :space-key (or (System/getenv "ARQIVIST_CONFLUENCE_SPACE_KEY") "ARQIVISTSTORE")}
 
-          :slack {:client-id (System/getenv "ARQIVIST_SLACK_CLIENT_ID")
-                  :client-secret (System/getenv "ARQIVIST_SLACK_CLIENT_SECRET")
-                  :signing-secret (System/getenv "ARQIVIST_SLACK_SIGNING_SECRET")
-                  :share-url (System/getenv "ARQIVIST_SLACK_SHARE_URL")}
+            :slack {:client-id (System/getenv "ARQIVIST_SLACK_CLIENT_ID")
+                    :client-secret (System/getenv "ARQIVIST_SLACK_CLIENT_SECRET")
+                    :signing-secret (System/getenv "ARQIVIST_SLACK_SIGNING_SECRET")
+                    :redirect-uri slack-redirect-uri
+                    :share-url (str (System/getenv "ARQIVIST_SLACK_SHARE_URL")
+                                    "&redirect_uri=" slack-redirect-uri
+                                    "&state=")}
 
-          :port (parse-long (or (System/getenv "ARQIVIST_PORT") "8989"))
+            :port (parse-long (or (System/getenv "ARQIVIST_PORT") "8989"))
 
-          :datasource-options {;; NOTE: No idea what each of these actually do, should learn :D
-                               :maximum-pool-size 5
-                               :minimum-idle 2
-                               :idle-timeout 12000
-                               :max-lifetime 300000
-                               :jdbc-url (or (System/getenv "JDBC_DATABASE_URL")
-                                             "jdbc:postgresql://localhost/arqivist?user=arqivist&password=arqivist")}}
+            :datasource-options {;; NOTE: No idea what each of these actually do, should learn :D
+                                 :maximum-pool-size 5
+                                 :minimum-idle 2
+                                 :idle-timeout 12000
+                                 :max-lifetime 300000
+                                 :jdbc-url (or (System/getenv "JDBC_DATABASE_URL")
+                                               "jdbc:postgresql://localhost/arq?user=arqivist&password=arqivist")}}
 
-    ;; Cache component to hold data between API calls
-    ;; TODO: explore core.cache instead of just an atom
-    :cache {:cache #::donut{:start (atom {})}}
+      ;; Cache component to hold data between API calls
+      ;; TODO: explore core.cache instead of just an atom
+      :cache {:cache #::donut{:start (atom {})}}
 
-    ;; Event logger
-    :event-log {:publisher event-logger}
+      ;; Event logger
+      :event-log {:publisher event-logger}
 
-    ;; Persistence components
-    :db {:migrations migrations
-         :db-connection db-connection}
+      ;; Persistence components
+      :db {:migrations migrations
+           :db-connection db-connection}
 
-    ;; HTTP server components
-    :http {:server http-server}}})
+      ;; HTTP server components
+      :http {:server http-server}}}))
