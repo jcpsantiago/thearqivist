@@ -21,7 +21,7 @@
 
 # .PHONY: ensures target used rather than matching file name
 # https://makefiletutorial.com/#phony
-.PHONY: all lint deps dist pre-commit-check repl test test-ci test-watch clean
+.PHONY: all lint deps dist docs pre-commit-check repl test test-ci test-watch clean
 
 
 # ------- Makefile Variables --------- #
@@ -31,6 +31,9 @@
 
 # Column the target description is printed from
 HELP-DESCRIPTION-SPACING := 24
+
+## Tool commands
+MKDOCS_SERVER := mkdocs serve --dev-addr localhost:7777
 
 # Makefile file and directory name wildcard
 # EDN-FILES := $(wildcard *.edn)
@@ -153,6 +156,19 @@ lint-clean:  ## Clean MegaLinter report information
 
 # ------------------------------------ #
 
+# --- Documentation Generation  ------ #
+docs:  ## Build and run mkdocs in local server
+	$(info --------- Mkdocs Local Server ---------)
+	$(MKDOCS_SERVER)
+
+docs-changed:  ## Build only changed files and run mkdocs in local server
+	$(info --------- Mkdocs Local Server ---------)
+	$(MKDOCS_SERVER) --dirtyreload
+
+docs-build:  ## Build static docs locally
+	$(info --------- Mkdocs Local Server ---------)
+	mkdocs build
+# ------------------------------------ #
 
 # ------- Docker Containers ---------- #
 
