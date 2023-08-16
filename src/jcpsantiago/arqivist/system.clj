@@ -131,7 +131,7 @@
                                  :idle-timeout 12000
                                  :max-lifetime 300000
                                  :jdbc-url (or (System/getenv "JDBC_DATABASE_URL")
-                                               "jdbc:postgresql://localhost/arq?user=arqivist&password=arqivist")}}
+                                               "jdbc:postgresql://localhost/arqivist?user=arqivist&password=arqivist")}}
 
       ;; Cache component to hold data between API calls
       ;; TODO: explore core.cache instead of just an atom
