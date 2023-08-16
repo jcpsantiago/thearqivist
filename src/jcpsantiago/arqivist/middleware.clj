@@ -87,10 +87,10 @@
   [db-connection handler _]
   (fn [request]
     (try
-      (let [slack-team-attributes (->> (sql/get-by-id db-connection :slack_teams
-                                                      (get-in request [:parameters :form :team_id])
-                                                      :external_team_id {})
-                                       (spec/conform ::specs/team-attributes))
+      (let [slack-team-row (sql/get-by-id db-connection :slack_teams
+                                          (get-in request [:parameters :form :team_id])
+                                          :external_team_id {})
+            slack-team-attributes (spec/conform ::specs/team-attributes slack-team-row)
             ;; for use in clj-slack's functions, see https://github.com/julienXX/clj-slack
             slack-connection {:api-url "https://slack.com/api"
                               :token (:slack_teams/access_token slack-team-attributes)}]
@@ -110,7 +110,7 @@
             (mulog/log ::add-slack-team-attributes
                        :success :false
                        :error "Spec does not conform"
-                       :explanation (spec/explain ::specs/team-attributes slack-team-attributes))
+                       :explanation (spec/explain ::specs/team-attributes slack-team-row))
             (response/bad-request))))
 
       (catch Exception e
@@ -128,19 +128,19 @@
     ;; Add context of each request to all trace events generated for the specific request
     (mulog/with-context
      {:uri            (get request :uri)
-      :request-method (get request :request-method)}
+      :request-method (get request :request-method)})
 
      ;; track the request duration and outcome
-     (mulog/trace :io.redefine.datawarp/http-request
-                  ;; add key/value pairs for tracking event only
-                  {:pairs [:content-type     (get-in request [:headers "content-type"])
-                           :content-encoding (get-in request [:headers "content-encoding"])
-                           :middleware       id]
-                   ;; capture http status code from the response
-                   :capture (fn [{:keys [status]}] {:http-status status})}
+    (mulog/trace :io.redefine.datawarp/http-request
+                ;; add key/value pairs for tracking event only
+      {:pairs [:content-type     (get-in request [:headers "content-type"])
+               :content-encoding (get-in request [:headers "content-encoding"])
+               :middleware       id]
+       ;; capture http status code from the response
+       :capture (fn [{:keys [status]}] {:http-status status})}
 
-                  ;; call the request handler
-                  (handler request)))))
+      ;; call the request handler
+      (handler request))))
 
 ;; Atlassian middleware -----------------------------------------------------
 (defn verify-atlassian-iframe
