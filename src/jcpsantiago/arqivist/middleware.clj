@@ -11,7 +11,8 @@
    [com.brunobonacci.mulog :as mulog]
    [next.jdbc.sql :as sql]
    [jcpsantiago.arqivist.api.confluence.utils :as utils]
-   [jcpsantiago.arqivist.api.slack.specs :as specs]))
+   [jcpsantiago.arqivist.api.slack.specs :as specs]
+   [ring.util.response :as response]))
 
 ;; Slack middleware ----------------------------------------------------------
 (defn wrap-keep-raw-json-string
@@ -77,7 +78,6 @@
                      :local-time (java.time.LocalDateTime/now))
           {:status 403 :body "Invalid credentials provided"})))))
 
-
 (defn wrap-add-slack-team-attributes
   "
   Ring middleware to add slack team credentials needed to use the Slack API.
@@ -94,17 +94,30 @@
             ;; for use in clj-slack's functions, see https://github.com/julienXX/clj-slack
             slack-connection {:api-url "https://slack.com/api"
                               :token (:slack_teams/access_token slack-team-attributes)}]
-        (-> request
-            (assoc :slack-team-attributes slack-team-attributes)
-            (assoc :slack-connection slack-connection)
-            handler))
+        (if (and (spec/valid? ::specs/team-attributes slack-team-attributes)
+                 (seq (:token slack-connection)))
+          (do
+            (mulog/log ::add-slack-team-attributes
+                       :success :true
+                       :local-time (java.time.LocalDateTime/now))
+            (-> request
+                (assoc :slack-team-attributes slack-team-attributes)
+                (assoc :slack-connection slack-connection)
+                handler))
+
+          ;; invalid spec
+          (do
+            (mulog/log ::add-slack-team-attributes
+                       :success :false
+                       :error "Spec does not conform"
+                       :explanation (spec/explain ::specs/team-attributes slack-team-attributes))
+            (response/bad-request))))
 
       (catch Exception e
         (mulog/log ::add-slack-team-attributes
                    :success :false
                    :error (.getMessage e)
                    :local-time (java.time.LocalDateTime/now))))))
-
 
 ;; Logging middleware -----------------------------------------------------
 ;; https://github.com/BrunoBonacci/mulog/blob/master/doc/ring-tracking.md
