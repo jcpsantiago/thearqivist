@@ -172,8 +172,11 @@ docs-build:  ## Build static docs locally
 
 # ------- Docker Containers ---------- #
 
+docker-db:  # Docker Postgres database
+	$(info --------- Docker run ---------)
+	docker compose up -d postgres
+
 docker-build:  ## Build Service with docker compose
-	$(info --------- Docker Compose Build ---------)
 	docker compose up --build
 
 docker-build-clean:  ## Build Service with docker compose, removing orphans
@@ -182,7 +185,7 @@ docker-build-clean:  ## Build Service with docker compose, removing orphans
 
 docker-down:  ## Shut down Service using docker compose
 	$(info --------- Docker Compose Down ---------)
-	docker-compose down
+	docker compose down
 
 
 swagger-editor:  ## Start Swagger Editor in Docker

@@ -25,6 +25,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * dev: refactor slack verification middleware to keep the original body, plus parse header parameters
 * [#45](https://github.com/jcpsantiago/thearqivist/issues/45) Add help keyword to slash command
 * dev: mkdocs makefile targets for local documentation development
+* dev: docker-db target to run postgresql database
 
 ## 0.1.0 - 2023-04-20
 
