@@ -38,4 +38,13 @@ For these reasons, The Arqivist is **fully GDPR compliant**.
 
 ## Archiving your first messages
 
-WIP
+The entrypoint for most actions is the `/arqive` slash command.
+Type it without any arguments in the channel you want to archive, and you'll be greeted with a modal like this
+
+![A screenshot of the setup modal view](/resources/images/arqive_setup_modal.png)
+
+select the frequency with which The Arqivist should save the channel, and press "Create archive".
+For `daily` and `weekly` the app will create an archive immediately, then update it (i.e. _append new messages to the Confluence page_, and (if setup) add new json files to remote storage)
+with the frequency you select at 12am. Finally, you'll receive feedback that your job started
+
+![A screenshot of the confirmation modal view](/resources/images/arqive_confirmation_modal.png)
