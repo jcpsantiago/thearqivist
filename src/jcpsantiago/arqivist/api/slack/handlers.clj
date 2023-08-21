@@ -106,18 +106,19 @@
 (defn interaction-handler
   [_]
   (fn [{{{{:keys [type team user] :as payload} :payload} :form} :parameters :as request}]
-    (mulog/with-context
-     {:type type
-      :team (:id team)
-      :user (:id user)
-      :frequency (get-in payload [:view :state :values :archive_frequency_selector :radio_buttons-action :selected_option :value])
+    (let [context {:type type
+                   :team (:id team)
+                   :user (:id user)
+                   :frequency (get-in payload [:view :state :values :archive_frequency_selector :radio_buttons-action :selected_option :value])}]
 
-      (mulog/log ::interaction-payload
-                 :local-time (java.time.LocalDateTime/now))
-      (case type
-        "view_submission" (view-submission request)
-        "message_action" "TODO"
-        (bad-request "Unknown type"))})))
+      (mulog/with-context
+       context
+        (mulog/log ::interaction-payload
+                   :local-time (java.time.LocalDateTime/now))
+        (case type
+          "view_submission" (view-submission request)
+          "message_action" "TODO"
+          (bad-request "Unknown type"))))))
 
 (defn slash-command
   "
