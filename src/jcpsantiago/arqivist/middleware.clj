@@ -12,7 +12,8 @@
    [next.jdbc.sql :as sql]
    [jcpsantiago.arqivist.api.confluence.utils :as utils]
    [jcpsantiago.arqivist.api.slack.specs :as specs]
-   [ring.util.response :as response]))
+   [ring.util.response :refer [bad-request]]
+   [jsonista.core :as json]))
 
 ;; Slack middleware ----------------------------------------------------------
 (defn wrap-keep-raw-json-string
@@ -110,15 +111,23 @@
   [db-connection handler _]
   (fn [request]
     (try
-      (let [slack-team-row (sql/get-by-id db-connection :slack_teams
-                                          (get-in request [:parameters :form :team_id])
+      (let [team_id (or
+                     ;; from slash command
+                     (get-in request [:parameters :form :team_id])
+                     ;; from interaction payload e.g. after submitting a view
+                     (get-in request [:parameters :form :payload :team :id]))
+            slack-team-row (sql/get-by-id db-connection :slack_teams
+                                          team_id
                                           :external_team_id {})
             slack-team-attributes (spec/conform ::specs/team-attributes slack-team-row)
             ;; for use in clj-slack's functions, see https://github.com/julienXX/clj-slack
             slack-connection {:api-url "https://slack.com/api"
                               :token (:slack_teams/access_token slack-team-attributes)}]
-        (if (and (spec/valid? ::specs/team-attributes slack-team-attributes)
-                 (seq (:token slack-connection)))
+
+        (cond
+
+          (and (spec/valid? ::specs/team-attributes slack-team-attributes)
+               (seq (:token slack-connection)))
           (do
             (mulog/log ::add-slack-team-attributes
                        :success :true
@@ -127,18 +136,40 @@
                 (assoc :slack-team-attributes slack-team-attributes)
                 (assoc :slack-connection slack-connection)
                 handler))
+          (nil? (:token slack-connection))
+          (do
+            (mulog/log ::add-slack-team-attributes
+                       :success :false
+                       :error "Missing Slack connection token"
+                       :team-id team_id
+                       :local-time (java.time.LocalDateTime/now))
+            (bad-request ""))
 
-          ;; invalid spec
+          ;; NOTE: edge-case, only became relevant during development
+          ;; it shouldn't be possible to have access to the app
+          ;; without having installed it first
+          (nil? slack-team-row)
+          (do
+            (mulog/log ::add-slack-team-attributes
+                       :success :false
+                       :error "Missing Slack credentials in the db"
+                       ;; TODO: add this to the logging context?
+                       :team-id team_id
+                       :local-time (java.time.LocalDateTime/now))
+            (bad-request ""))
+
+          :else
           (do
             (mulog/log ::add-slack-team-attributes
                        :success :false
                        :error "Spec does not conform"
                        :explanation (spec/explain ::specs/team-attributes slack-team-row))
-            (response/bad-request))))
+            (bad-request ""))))
 
       (catch Exception e
         (mulog/log ::add-slack-team-attributes
                    :success :false
+                   :exception e
                    :error (.getMessage e)
                    :local-time (java.time.LocalDateTime/now))))))
 
