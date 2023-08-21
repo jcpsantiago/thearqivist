@@ -1,0 +1,158 @@
+{
+  "type": "view_submission",
+  "team": {
+    "id": "T036J39LN48",
+    "domain": "softpepeworkspace"
+  },
+  "user": {
+    "id": "U035UADB70S",
+    "username": "eraumavezspam",
+    "name": "eraumavezspam",
+    "team_id": "T036J39LN48"
+  },
+  "api_app_id": "A03820TGWQH",
+  "token": "...",
+  "trigger_id": "5755428117158.3222111702144.f6bcae9105e7ba61422e63ccc549660e",
+  "view": {
+    "id": "V05MZFLF1N3",
+    "team_id": "T036J39LN48",
+    "type": "modal",
+    "blocks": [
+      {
+        "type": "section",
+        "block_id": "lC+Zh",
+        "text": {
+          "type": "mrkdwn",
+          "text": "Looks like you want to create an archive from *<#C03BYSEB4EP|test-public>*",
+          "verbatim": false
+        }
+      },
+      {
+        "type": "divider",
+        "block_id": "Ye2\/I"
+      },
+      {
+        "type": "input",
+        "block_id": "archive_frequency_selector",
+        "label": {
+          "type": "plain_text",
+          "text": "How often do you want to archive it?",
+          "emoji": true
+        },
+        "optional": false,
+        "dispatch_action": false,
+        "element": {
+          "type": "radio_buttons",
+          "action_id": "radio_buttons-action",
+          "options": [
+            {
+              "text": {
+                "type": "plain_text",
+                "text": "Once",
+                "emoji": true
+              },
+              "value": "once"
+            },
+            {
+              "text": {
+                "type": "plain_text",
+                "text": "Daily",
+                "emoji": true
+              },
+              "value": "daily"
+            },
+            {
+              "text": {
+                "type": "plain_text",
+                "text": "Weekly",
+                "emoji": true
+              },
+              "value": "weekly"
+            }
+          ]
+        }
+      },
+      {
+        "type": "context",
+        "block_id": "DyEM4",
+        "elements": [
+          {
+            "type": "mrkdwn",
+            "text": "For *daily* and *weekly*: the archive is created _now_, then updated at 12am with the frequency you selected.",
+            "verbatim": false
+          }
+        ]
+      },
+      {
+        "type": "section",
+        "block_id": "SYaA7",
+        "text": {
+          "type": "mrkdwn",
+          "text": "Once the archive is created I'll inform *<#C03BYSEB4EP|test-public>* and share a link to the archive :handshake:",
+          "verbatim": false
+        }
+      },
+      {
+        "type": "divider",
+        "block_id": "ilH6e"
+      },
+      {
+        "type": "context",
+        "block_id": "5NJ",
+        "elements": [
+          {
+            "type": "mrkdwn",
+            "text": "For more info use the `\/arqive help` command.",
+            "verbatim": false
+          }
+        ]
+      }
+    ],
+    "private_metadata": "",
+    "callback_id": "",
+    "state": {
+      "values": {
+        "archive_frequency_selector": {
+          "radio_buttons-action": {
+            "type": "radio_buttons",
+            "selected_option": {
+              "text": {
+                "type": "plain_text",
+                "text": "Once",
+                "emoji": true
+              },
+              "value": "once"
+            }
+          }
+        }
+      }
+    },
+    "hash": "1692345728.XjNFSel6",
+    "title": {
+      "type": "plain_text",
+      "text": "The Arqivist",
+      "emoji": true
+    },
+    "clear_on_close": false,
+    "notify_on_close": false,
+    "close": {
+      "type": "plain_text",
+      "text": "Cancel",
+      "emoji": true
+    },
+    "submit": {
+      "type": "plain_text",
+      "text": "Create archive",
+      "emoji": true
+    },
+    "previous_view_id": null,
+    "root_view_id": "V05MZFLF1N3",
+    "app_id": "A03820TGWQH",
+    "external_id": "",
+    "app_installed_team_id": "T036J39LN48",
+    "bot_id": "B037PCPD1T5"
+  },
+  "response_urls": [],
+  "is_enterprise_install": false,
+  "enterprise": null
+}
