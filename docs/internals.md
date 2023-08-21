@@ -59,6 +59,7 @@ sequenceDiagram
     A->>-U: Feedback
     Note left of U: user sees feedback, end
 ```
+
 There are two ways to use the bot in Slack:
 
 * Via a [message shortcut :octicons-link-external-16:](https://api.slack.com/interactivity/shortcuts/using#message_shortcuts)

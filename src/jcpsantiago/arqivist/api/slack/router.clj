@@ -28,6 +28,21 @@
         :responses {200 {:body string?}}
         :handler handlers/message-shortcut}}]
 
+     ["/interactivity"
+      {:swagger {:externalDocs
+                 {:description "Slack docs about Slash Commands"
+                  :url "https://api.slack.com/interactivity/slash-commands"}}
+       :middleware [[wrap-verify-slack-request :verify-slack-request]
+                    [middleware-arqivist/wrap-parse-interaction-payload "parse-interaction-payload"]
+                    [wrap-add-slack-team-attributes :add-slack-team-attributes]]
+       :post
+       {:summary "Target for Slash Command interactions"
+        :description "This endpoint receives all interactions initiated by typing the `/arqive` slash command."
+        :parameters {:header ::specs/request-header-attributes
+                     :form ::specs/interaction-payload}
+        :responses {200 {:body string?}}
+        :handler (handlers/interaction-handler system)}}]
+
      ;; TODO: Add example from https://api.slack.com/interactivity/slash-commands#app_command_handling
      ["/slash"
       {:swagger {:externalDocs

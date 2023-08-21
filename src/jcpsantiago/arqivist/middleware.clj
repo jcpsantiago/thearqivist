@@ -11,7 +11,9 @@
    [com.brunobonacci.mulog :as mulog]
    [next.jdbc.sql :as sql]
    [jcpsantiago.arqivist.api.confluence.utils :as utils]
-   [jcpsantiago.arqivist.api.slack.specs :as specs]))
+   [jcpsantiago.arqivist.api.slack.specs :as specs]
+   [ring.util.response :refer [bad-request]]
+   [jsonista.core :as json]))
 
 ;; Slack middleware ----------------------------------------------------------
 (defn wrap-keep-raw-json-string
@@ -77,6 +79,28 @@
                      :local-time (java.time.LocalDateTime/now))
           {:status 403 :body "Invalid credentials provided"})))))
 
+(defn wrap-parse-interaction-payload
+  "
+  Ring middleware to parse the JSON string in the payload key of Slack interaction payloads.
+  "
+  [handler id]
+  (let [event-name (keyword (str *ns*) id)]
+    (fn [request]
+      (let [payload (get-in request [:parameters :form :payload])
+            parsed (json/read-value payload json/keyword-keys-object-mapper)
+            conformed (spec/conform ::specs/view-submission-payload parsed)]
+        (if (spec/invalid? conformed)
+          (do
+            (mulog/log event-name
+                       :success :false
+                       :explanation (spec/explain ::specs/view-submission-payload parsed)
+                       :local-time (java.time.LocalDateTime/now))
+            (bad-request ""))
+          (do
+            (mulog/log event-name
+                       :success :true
+                       :local-time (java.time.LocalDateTime/now))
+            (handler (assoc-in request [:parameters :form :payload] conformed))))))))
 
 (defn wrap-add-slack-team-attributes
   "
@@ -87,24 +111,67 @@
   [db-connection handler _]
   (fn [request]
     (try
-      (let [slack-team-attributes (->> (sql/get-by-id db-connection :slack_teams
-                                                      (get-in request [:parameters :form :team_id])
-                                                      :external_team_id {})
-                                       (spec/conform ::specs/team-attributes))
+      (let [team_id (or
+                     ;; from slash command
+                     (get-in request [:parameters :form :team_id])
+                     ;; from interaction payload e.g. after submitting a view
+                     (get-in request [:parameters :form :payload :team :id]))
+            slack-team-row (sql/get-by-id db-connection :slack_teams
+                                          team_id
+                                          :external_team_id {})
+            slack-team-attributes (spec/conform ::specs/team-attributes slack-team-row)
             ;; for use in clj-slack's functions, see https://github.com/julienXX/clj-slack
             slack-connection {:api-url "https://slack.com/api"
                               :token (:slack_teams/access_token slack-team-attributes)}]
-        (-> request
-            (assoc :slack-team-attributes slack-team-attributes)
-            (assoc :slack-connection slack-connection)
-            handler))
+
+        (cond
+
+          (and (spec/valid? ::specs/team-attributes slack-team-attributes)
+               (seq (:token slack-connection)))
+          (do
+            (mulog/log ::add-slack-team-attributes
+                       :success :true
+                       :local-time (java.time.LocalDateTime/now))
+            (-> request
+                (assoc :slack-team-attributes slack-team-attributes)
+                (assoc :slack-connection slack-connection)
+                handler))
+          (nil? (:token slack-connection))
+          (do
+            (mulog/log ::add-slack-team-attributes
+                       :success :false
+                       :error "Missing Slack connection token"
+                       :team-id team_id
+                       :local-time (java.time.LocalDateTime/now))
+            (bad-request ""))
+
+          ;; NOTE: edge-case, only became relevant during development
+          ;; it shouldn't be possible to have access to the app
+          ;; without having installed it first
+          (nil? slack-team-row)
+          (do
+            (mulog/log ::add-slack-team-attributes
+                       :success :false
+                       :error "Missing Slack credentials in the db"
+                       ;; TODO: add this to the logging context?
+                       :team-id team_id
+                       :local-time (java.time.LocalDateTime/now))
+            (bad-request ""))
+
+          :else
+          (do
+            (mulog/log ::add-slack-team-attributes
+                       :success :false
+                       :error "Spec does not conform"
+                       :explanation (spec/explain ::specs/team-attributes slack-team-row))
+            (bad-request ""))))
 
       (catch Exception e
         (mulog/log ::add-slack-team-attributes
                    :success :false
+                   :exception e
                    :error (.getMessage e)
                    :local-time (java.time.LocalDateTime/now))))))
-
 
 ;; Logging middleware -----------------------------------------------------
 ;; https://github.com/BrunoBonacci/mulog/blob/master/doc/ring-tracking.md
@@ -115,19 +182,17 @@
     ;; Add context of each request to all trace events generated for the specific request
     (mulog/with-context
      {:uri            (get request :uri)
-      :request-method (get request :request-method)}
+      :request-method (get request :request-method)})
 
-     ;; track the request duration and outcome
-     (mulog/trace :io.redefine.datawarp/http-request
-                  ;; add key/value pairs for tracking event only
-                  {:pairs [:content-type     (get-in request [:headers "content-type"])
-                           :content-encoding (get-in request [:headers "content-encoding"])
-                           :middleware       id]
-                   ;; capture http status code from the response
-                   :capture (fn [{:keys [status]}] {:http-status status})}
-
-                  ;; call the request handler
-                  (handler request)))))
+    ;; track the request duration and outcome
+    (mulog/trace
+     :io.redefine.datawarp/http-request
+     {:pairs [:content-type     (get-in request [:headers "content-type"])
+              :content-encoding (get-in request [:headers "content-encoding"])
+              :middleware       id]
+      ;; capture http status code from the response
+      :capture (fn [{:keys [status]}] {:http-status status})}
+     (handler request))))
 
 ;; Atlassian middleware -----------------------------------------------------
 (defn verify-atlassian-iframe

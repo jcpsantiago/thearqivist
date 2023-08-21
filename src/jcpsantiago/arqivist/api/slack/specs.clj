@@ -21,6 +21,7 @@
 (spec/def ::app_id string?)
 (spec/def ::id string?)
 (spec/def ::name string?)
+(spec/def ::username string?)
 (spec/def ::token_type #{"bot" "user"})
 (spec/def ::text string?)
 
@@ -36,21 +37,26 @@
    :req-un [::id]
    :opt-un [::name]))
 
+(spec/def ::user
+  (spec/keys
+   :req-un [::id ::team_id ::name]
+   :opt-un [::username]))
+
 (spec/def ::authed_user
   (spec/keys
    :req-un [::id]
    :opt-un [::scope ::access_token ::token_type]))
 
 ;; OAuth redirect -----------------------------------------------
-(spec/def ::code non-blank-string?)
-(spec/def ::state non-blank-string?)
+(spec/def :oauth/code non-blank-string?)
+(spec/def :oauth/state non-blank-string?)
 
 ;; Initial request received from Slack once user allows the requested scopes
 ;; code is exchanged for a request token (see spec below)
 ;; official docs in https://api.slack.com/authentication/oauth-v2
 (spec/def ::oauth-redirect
   (spec/keys
-   :req-un [::code ::state]))
+   :req-un [:oauth/code :oauth/state]))
 
 ;; Access token request
 (spec/def ::oauth-access
@@ -101,21 +107,52 @@
    :req-un [::api_app_id ::trigger_id ::command ::channel_id ::token ::user_name
             ::channel_name ::user_id ::team_id ::team_domain ::response_url ::text]))
 
-(spec/def ::shortcut-body
-  (spec/keys
-   :req-un [::token ::callback_id ::type ::trigger_id ::response_url
-            ::team ::channel ::user ::message]))
+;; The user will see a modal pop-up before any potentially destructive actions
+;; When the user submits the modal, Slack sends an "interaction payload" of type "view_submission"
+;; See official docs in https://api.slack.com/reference/interaction-payloads/views
+;; See example payload in test/jcpsantiago/arqivist/api/slack/view_submission_payload.json
+(spec/def ::type string?)
+(spec/def ::callback_id string?)
+(spec/def ::value #{"once" "daily" "weekly"})
 
-(spec/def ::view-body
+(spec/def ::selected_option
   (spec/keys
-   :req-un [::id ::type ::title ::submit ::blocks
-            ::private_metadata ::callback_id ::state
-            ::hash ::response_urls]))
+   :req-un [::value]))
 
-(spec/def ::view-submission-body
+(spec/def ::radio_buttons-action
   (spec/keys
-   :req-un [::type ::team ::user ::view]))
+   :req-un [::selected_option]))
 
+(spec/def ::archive_frequency_selector
+  (spec/keys
+   :req-un [::radio_buttons-action]))
+
+(spec/def ::values
+  (spec/keys
+   :req-un [::archive_frequency_selector]))
+
+(spec/def ::state
+  (spec/keys
+   :req-un [::values]))
+
+(spec/def ::view
+  (spec/keys
+   :req-un [::id ::team_id ::type ::callback_id]))
+
+(spec/def ::view-submission-payload
+  (spec/keys
+   :req-un [::type ::team ::user ::api_app_id ::token ::trigger_id ::view]))
+
+;; The "view_submission" payload is a form with one key "payload" containing a JSON string
+(spec/def ::payload string?)
+(spec/def ::interaction-payload
+  (spec/keys :req-un [::payload]))
+
+;; (spec/def ::view-body
+;;   (spec/keys
+;;    :req-un [::id ::type ::title ::submit ::blocks
+;;             ::private_metadata ::callback_id ::state
+;;             ::hash ::response_urls]))
 
 ;; Header parameters -------------------------------------------------------
 ;; Used to verify Slack requests
@@ -127,21 +164,21 @@
    :req-un [::x-slack-signature ::x-slack-request-timestamp]))
 
 ;; Internal representations ------------------------------------------------
-(spec/def :slack_teams/:id pos-int?)
-(spec/def :slack_teams/:uuid uuid?)
-(spec/def :slack_teams/:app_id string?)
-(spec/def :slack_teams/:external_team_id string?)
-(spec/def :slack_teams/:team_name string?)
-(spec/def :slack_teams/:registering_user string?)
-(spec/def :slack_teams/:scopes string?)
-(spec/def :slack_teams/:access_token string?)
-(spec/def :slack_teams/:bot_user_id string?)
-(spec/def :slack_teams/:created_at inst?)
-(spec/def :slack_teams/:atlassian_tenant_id pos-int?)
+(spec/def :slack_teams/id pos-int?)
+(spec/def :slack_teams/uuid uuid?)
+(spec/def :slack_teams/app_id string?)
+(spec/def :slack_teams/external_team_id string?)
+(spec/def :slack_teams/team_name string?)
+(spec/def :slack_teams/registering_user string?)
+(spec/def :slack_teams/scopes string?)
+(spec/def :slack_teams/access_token string?)
+(spec/def :slack_teams/bot_user_id string?)
+(spec/def :slack_teams/created_at inst?)
+(spec/def :slack_teams/atlassian_tenant_id pos-int?)
 
 (spec/def ::team-attributes
   (spec/keys
-   :req [:slack_teams/:id :slack_teams/:uuid :slack_teams/:app_id
-         :slack_teams/:external_team_id :slack_teams/:team_name
-         :slack_teams/:registering_user :slack_teams/:scopes :slack_teams/:access_token
-         :slack_teams/:bot_user_id :slack_teams/:created_at :slack_teams/:atlassian_tenant_id]))
+   :req [:slack_teams/id :slack_teams/uuid :slack_teams/app_id
+         :slack_teams/external_team_id :slack_teams/team_name
+         :slack_teams/registering_user :slack_teams/scopes :slack_teams/access_token
+         :slack_teams/bot_user_id :slack_teams/created_at :slack_teams/atlassian_tenant_id]))

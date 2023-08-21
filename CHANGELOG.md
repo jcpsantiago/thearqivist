@@ -26,6 +26,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * [#45](https://github.com/jcpsantiago/thearqivist/issues/45) Add help keyword to slash command
 * dev: mkdocs makefile targets for local documentation development
 * dev: docker-db target to run postgresql database
+* Part of [#47](https://github.com/jcpsantiago/thearqivist/issues/47) Slack modal for `/arqive` slash command
+* Part of [#47](https://github.com/jcpsantiago/thearqivist/issues/47) Add modals for setting up and saving a channel
 
 ## 0.1.0 - 2023-04-20
 

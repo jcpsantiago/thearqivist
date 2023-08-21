@@ -1,4 +1,4 @@
-# The Arqivist 📓 
+# The Arqivist 📓
 
 <figure>
     <img src="https://arqivist.app/img/arqivist.jpg"
@@ -28,9 +28,9 @@ Hop over to [Getting started](getting_started.md) for instructions on how to use
 
 You can follow development in our [GitHub Project:octicons-link-external-16:](https://github.com/users/jcpsantiago/projects/1/views/1).
 
-* Ability to _fully_ backup Slack all channels (i.e. all messages, all files, all emojis), 
+* Ability to _fully_ backup Slack all channels (i.e. all messages, all files, all emojis),
 all the time — at the moment you must select which channels you want to backup one by one.
-* Backup raw Slack JSON to external cloud storage such as Google Drive, One Drive, Dropbox, etc. 
+* Backup raw Slack JSON to external cloud storage such as Google Drive, One Drive, Dropbox, etc.
 
 If you have a use-case missing from our roadmap,
 open an issue, or reach out to us. We'd love to hear from you!
@@ -75,7 +75,7 @@ but it should be complemented with a less interactive medium for long-term effic
 
 ## Collaborating
 
-The Arqivist's source code is released as open-source software 
+The Arqivist's source code is released as open-source software
 under the [MIT license:octicons-link-external-16:](https://opensource.org/license/mit/).
 
 If you found and fixed a bug, go ahead an open an PR (thanks!).

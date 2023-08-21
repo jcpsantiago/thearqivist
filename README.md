@@ -36,11 +36,9 @@ WIP
 
 After installing The Arqivist in Slack, you can interact with the bot in two ways
 
-* `/arqive [keyword]` [slash command](https://api.slack.com/interactivity/slash-commands) is the main point of entry to The Arqivist. It expects one of these keywords:
- - `help` — show help information with the available keywords, ways of interacting etc.
-
-* [Message shortcut](https://api.slack.com/interactivity/shortcuts/using#message_shortcuts) — creates a Confluence page with all the messages in the _current thread_
-
+* `/arqive [keyword]` [slash command](https://api.slack.com/interactivity/slash-commands) is the main point of entry to The Arqivist. It expects no keyword, or one of these:
+  * no keyword — opens setup modal to select how often to save the channel to Confluence and other remote locations (if available)
+  * `help` — show help information with the available keywords, ways of interacting etc.
 
 ## Use-cases
 

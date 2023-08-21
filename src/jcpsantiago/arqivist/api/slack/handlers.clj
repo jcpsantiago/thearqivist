@@ -1,8 +1,10 @@
 (ns jcpsantiago.arqivist.api.slack.handlers
   "Ring handlers and support functions for Slack requests."
   (:require
-   [clj-slack.oauth :as clj-slack]
+   [clj-slack.oauth :as slack-oauth]
+   [clj-slack.views :as slack-views]
    [clojure.spec.alpha :as spec]
+   [clojure.string :refer [trim]]
    [com.brunobonacci.mulog :as mulog]
    [jcpsantiago.arqivist.api.slack.ui-blocks :as ui]
    [jcpsantiago.arqivist.api.slack.pages :as pages]
@@ -10,7 +12,7 @@
    [jcpsantiago.arqivist.api.slack.utils :as utils]
    [jsonista.core :as json]
    [next.jdbc.sql :as sql]
-   [ring.util.response :refer [response content-type]]))
+   [ring.util.response :refer [bad-request response content-type]]))
 
 (defn message-action-handler
   "Handles requests sent to /slack/shortcut with type `message_action`"
@@ -61,6 +63,63 @@
       response
       (content-type "application/json")))
 
+(defn setup-archival-modal
+  "
+  Block-kit representation of the 'Save to channel to Confluence' modal.
+  This modal is shown to the user after usage of the `/arqive once|daily|weekly` slash command.
+  "
+  [request]
+  (let [res (slack-views/open
+             (:slack-connection request)
+             (json/write-value-as-string (ui/setup-archival-modal request))
+             (get-in request [:parameters :form :trigger_id]))]
+
+    (if (:ok res)
+      (do
+        (mulog/log ::save-to-confluence-modal
+                   :success :true
+                   :local-time (java.time.LocalDateTime/now))
+        (response ""))
+
+      (do
+        (mulog/log ::save-to-confluence-modal
+                   :success :false
+                   :error (:error res)
+                   :response_metadata (:response_metadata res)
+                   :local-time (java.time.LocalDateTime/now))
+        (bad-request "")))))
+
+(defn view-submission
+  "
+  Creates a job to save a channel with a user-selected frequency in the setup-archival-modal.
+  Also updates the view with feedback for the user.
+  "
+  [request]
+  (mulog/log ::view-submitted
+             :local-time (java.time.LocalDateTime/now))
+  (-> {:response_action "update"
+       :view (ui/confirm-job-started-modal request)}
+      json/write-value-as-string
+      response
+      (content-type "application/json")))
+
+(defn interaction-handler
+  [_]
+  (fn [{{{{:keys [type team user] :as payload} :payload} :form} :parameters :as request}]
+    (let [context {:type type
+                   :team (:id team)
+                   :user (:id user)
+                   :frequency (get-in payload [:view :state :values :archive_frequency_selector :radio_buttons-action :selected_option :value])}]
+
+      (mulog/with-context
+       context
+       (mulog/log ::interaction-payload
+                  :local-time (java.time.LocalDateTime/now))
+       (case type
+         "view_submission" (view-submission request)
+         "message_action" "TODO"
+         (bad-request "Unknown type"))))))
+
 (defn slash-command
   "
   Handler function for /slack/slash route.
@@ -70,28 +129,25 @@
   See j.a.a.s.specs ns for the request spec. 
   "
   [_]
-  (fn [{{{:keys [text]} :form} :parameters}]
+  (fn [{{{:keys [text]} :form} :parameters :as request}]
     (mulog/log ::handling-slack-slash-command
                :text text
                :local-time (java.time.LocalDateTime/now))
-    (let [first-word (re-find #"^\w+" text)]
-      ;; TODO: respond to empty `text` with a modal containing various options
-      (case first-word
+    (let [trimmed-text (trim text)]
+      (case trimmed-text
+        "" (setup-archival-modal request)
         "help" (help-message)
         ;; TODO: add jobs handler
         ;; "jobs" (list-jobs)
-        ;; TODO: add save once handler
-        ;; "once" (save-to-confluence request)
         ;; TODO: add stop saving job handler
         ;; "stop" (drop-job request)
-        ;; TODO: add save daily, etc job handler
-        ;; "daily" (save-continously request)
         ;; TODO: add changelog handler
         ;; "changelog" (changelog)
         ;; TODO: if no match, respond with help message but explain there were no known keywords
         (response (str "I'm sorry but I don't know what"
-                       " `" text "` " "means :sweat_smile:\nCheck the available commands with "
-                       "`/arqive help`"))))))
+                       " `" text "` " "means :sweat_smile:\n"
+                       "Enter `/arqive` without any keywords to see options for saving the current channel or "
+                       "check the available commands with `/arqive help`"))))))
 
 ;;
 ;; ------------------------------------------------------
@@ -116,7 +172,7 @@
                                                   :base_url
                                                   {:columns [[:id :tenant_id]]})
 
-          token-response (clj-slack/access
+          token-response (slack-oauth/access
                           ;; there is no token yet, and this API call ignores it
                           {:api-url "https://slack.com/api" :token ""}
                           client-id client-secret code redirect-uri)]
