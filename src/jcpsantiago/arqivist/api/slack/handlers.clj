@@ -63,7 +63,7 @@
       response
       (content-type "application/json")))
 
-(defn save-to-confluence-modal
+(defn setup-archival-modal
   "
   Block-kit representation of the 'Save to channel to Confluence' modal.
   This modal is shown to the user after usage of the `/arqive once|daily|weekly` slash command.
@@ -71,11 +71,10 @@
   [request]
   (let [res (slack-views/open
              (:slack-connection request)
-             (json/write-value-as-string (ui/confirm-save-modal request))
+             (json/write-value-as-string (ui/setup-archival-modal request))
              (get-in request [:parameters :form :trigger_id]))]
 
     (if (:ok res)
-
       (do
         (mulog/log ::save-to-confluence-modal
                    :success :true
@@ -89,6 +88,36 @@
                    :response_metadata (:response_metadata res)
                    :local-time (java.time.LocalDateTime/now))
         (bad-request "")))))
+
+(defn view-submission
+  "
+  Creates a job to save a channel with a user-selected frequency in the setup-archival-modal.
+  Also updates the view with feedback for the user.
+  "
+  [request]
+  (mulog/log ::view-submitted
+             :local-time (java.time.LocalDateTime/now))
+  (-> {:response_action "update"
+       :view (ui/confirm-job-started-modal request)}
+      json/write-value-as-string
+      response
+      (content-type "application/json")))
+
+(defn interaction-handler
+  [_]
+  (fn [{{{{:keys [type team user] :as payload} :payload} :form} :parameters :as request}]
+    (mulog/with-context
+     {:type type
+      :team (:id team)
+      :user (:id user)
+      :frequency (get-in payload [:view :state :values :archive_frequency_selector :radio_buttons-action :selected_option :value])
+
+      (mulog/log ::interaction-payload
+                 :local-time (java.time.LocalDateTime/now))
+      (case type
+        "view_submission" (view-submission request)
+        "message_action" "TODO"
+        (bad-request "Unknown type"))})))
 
 (defn slash-command
   "
@@ -105,7 +134,7 @@
                :local-time (java.time.LocalDateTime/now))
     (let [trimmed-text (trim text)]
       (case trimmed-text
-        "" (save-to-confluence-modal request)
+        "" (setup-archival-modal request)
         "help" (help-message)
         ;; TODO: add jobs handler
         ;; "jobs" (list-jobs)
