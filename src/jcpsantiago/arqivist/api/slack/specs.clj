@@ -48,15 +48,15 @@
    :opt-un [::scope ::access_token ::token_type]))
 
 ;; OAuth redirect -----------------------------------------------
-(spec/def ::code non-blank-string?)
-(spec/def ::state non-blank-string?)
+(spec/def :oauth/code non-blank-string?)
+(spec/def :oauth/state non-blank-string?)
 
 ;; Initial request received from Slack once user allows the requested scopes
 ;; code is exchanged for a request token (see spec below)
 ;; official docs in https://api.slack.com/authentication/oauth-v2
 (spec/def ::oauth-redirect
   (spec/keys
-   :req-un [::code ::state]))
+   :req-un [:oauth/code :oauth/state]))
 
 ;; Access token request
 (spec/def ::oauth-access
