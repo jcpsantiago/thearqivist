@@ -113,12 +113,12 @@
 
       (mulog/with-context
        context
-        (mulog/log ::interaction-payload
-                   :local-time (java.time.LocalDateTime/now))
-        (case type
-          "view_submission" (view-submission request)
-          "message_action" "TODO"
-          (bad-request "Unknown type"))))))
+       (mulog/log ::interaction-payload
+                  :local-time (java.time.LocalDateTime/now))
+       (case type
+         "view_submission" (view-submission request)
+         "message_action" "TODO"
+         (bad-request "Unknown type"))))))
 
 (defn slash-command
   "
