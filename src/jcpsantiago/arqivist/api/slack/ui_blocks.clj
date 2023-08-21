@@ -21,10 +21,7 @@
      :elements
      [{:type "mrkdwn",
        :text
-       "
-       ✅ See options for saving a channel with `/arqive`
-       👀 View all channels being archived with `/arqive jobs`\n
-       ❌ Stop saving the current channel with `/arqive stop`
+       "✅ See options for saving a channel with `/arqive`\n👀 View all channels being archived with `/arqive jobs`\n❌ Stop saving the current channel with `/arqive stop`
        "}]}
     {:type "section", :text {:type "mrkdwn", :text " "}}
     {:type "section",
@@ -36,18 +33,19 @@
     {:type "context",
      :elements
      [{:type "mrkdwn",
-       :text "❓ Get help at any time with `/arqive help`"}]}]})
+       :text ":sos: Get help at any time with `/arqive help`"}]}]})
 
-(defn confirm-save-modal
+(defn setup-archival-modal
   "
- Modal asking the user to confirm saving a channel once.
- "
+  Modal asking the user to confirm saving a channel once.
+  "
   [request]
   (let [channel_name (get-in request [:parameters :form :channel_name])]
     {:type "modal"
      :title {:type "plain_text" :text "The Arqivist" :emoji true}
      :submit {:type "plain_text" :text "Create archive" :emoji true}
      :close {:type "plain_text" :text "Cancel" :emoji true}
+     :private_metadata (pr-str {:channel_name channel_name})
      :blocks
      [{:type "section"
        :text
@@ -71,19 +69,33 @@
        {:type "plain_text"
         :text "How often do you want to archive it?"
         :emoji true}}
+
+      {:type "divider"}
+
       {:type "context"
        :elements
        [{:type "mrkdwn"
-         :text
-         "For *daily* and *weekly*: the archive is created _now_, then updated at 12am with the frequency you selected."}]}
-      {:type "section"
+         :text "For *daily* and *weekly*: the archive is created _now_, then updated at 12am with the frequency you selected."}
+        {:type "mrkdwn"
+         :text ":sos: `/arqive help` — if you're stuck, check the docs"}]}]}))
+
+(defn confirm-job-started-modal
+  [request]
+  (let [payload (get-in request [:parameters :form :payload])
+        channel_name (-> payload :view :private_metadata read-string :channel_name)
+        frequency (get-in payload [:view :state :values :archive_frequency_selector :radio_buttons-action :selected_option :value])]
+    {:type "modal"
+     :close {:type "plain_text" :text "Ok" :emoji true}
+     :title
+     {:type "plain_text" :text "The Archivist" :emoji true}
+     :blocks
+     [{:type "section"
        :text
        {:type "mrkdwn"
         :text
-        (str "Once the archive is created I'll inform " "*#" channel_name "* and share a link to the archive :handshake:")}}
-      {:type "divider"}
-      {:type "context"
-       :elements
-       [{:type "mrkdwn"
-         :text "For more info use the `/arqive help` command."}]}]}))
+        (str "Understood!\nI'll create an archive for *#" channel_name "*"
+             (if-not (= "once" frequency)
+               (str ", and will updated it *" frequency "*.\n")
+               ".\n")
+             "You'll get a notification when it's ready :white_check_mark:")}}]}))
 
