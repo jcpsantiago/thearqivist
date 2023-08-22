@@ -182,6 +182,7 @@
         (nil? tenant_id)
         (do
           (mulog/log ::inserting-slack-team
+                     :success :false
                      :base-url state
                      :error "No tenant found in the db for the given base-url"
                      :local-time (java.time.LocalDateTime/now))
@@ -190,7 +191,9 @@
         (spec/invalid? (spec/conform ::specs/oauth-access token-response))
         (do
           (mulog/log ::inserting-slack-team
-                     :error (spec/explain-data ::specs/oauth-access token-response)
+                     :success :false
+                     :error "OAuth token response does not conform to spec"
+                     :explanation (spec/explain ::specs/oauth-access token-response)
                      :local-time (java.time.LocalDateTime/now))
           (-> pages/sad-slack-outcome response (content-type "text/html")))
 
@@ -198,6 +201,7 @@
 
         :else (do
                 (mulog/log ::inserting-slack-team
+                           :success :false
                            :tenant-id tenant_id
                            :error (:error token-response)
                            :local-time (java.time.LocalDateTime/now))
