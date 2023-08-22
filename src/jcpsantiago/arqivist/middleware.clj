@@ -83,24 +83,25 @@
   "
   Ring middleware to parse the JSON string in the payload key of Slack interaction payloads.
   "
-  [handler id]
-  (let [event-name (keyword (str *ns*) id)]
-    (fn [request]
-      (let [payload (get-in request [:parameters :form :payload])
-            parsed (json/read-value payload json/keyword-keys-object-mapper)
-            conformed (spec/conform ::specs/view-submission-payload parsed)]
-        (if (spec/invalid? conformed)
-          (do
-            (mulog/log event-name
-                       :success :false
-                       :explanation (spec/explain ::specs/view-submission-payload parsed)
-                       :local-time (java.time.LocalDateTime/now))
-            (bad-request ""))
-          (do
-            (mulog/log event-name
-                       :success :true
-                       :local-time (java.time.LocalDateTime/now))
-            (handler (assoc-in request [:parameters :form :payload] conformed))))))))
+  [handler _]
+  (fn [request]
+    (let [payload (get-in request [:parameters :form :payload])
+          parsed (json/read-value payload json/keyword-keys-object-mapper)
+          conformed (spec/conform ::specs/view-submission-payload parsed)]
+
+      (if (spec/invalid? conformed)
+        (do
+          (mulog/log ::parse-interaction-payload
+                     :success :false
+                     :request request
+                     :explanation (spec/explain-data ::specs/view-submission-payload parsed)
+                     :local-time (java.time.LocalDateTime/now))
+          (bad-request ""))
+        (do
+          (mulog/log ::parse-interaction-payload
+                     :success :true
+                     :local-time (java.time.LocalDateTime/now))
+          (handler (assoc-in request [:parameters :form :payload] conformed)))))))
 
 (defn wrap-add-slack-team-attributes
   "
@@ -187,12 +188,12 @@
     ;; track the request duration and outcome
     (mulog/trace
      :io.redefine.datawarp/http-request
-     {:pairs [:content-type     (get-in request [:headers "content-type"])
-              :content-encoding (get-in request [:headers "content-encoding"])
-              :middleware       id]
+      {:pairs [:content-type     (get-in request [:headers "content-type"])
+               :content-encoding (get-in request [:headers "content-encoding"])
+               :middleware       id]
       ;; capture http status code from the response
-      :capture (fn [{:keys [status]}] {:http-status status})}
-     (handler request))))
+       :capture (fn [{:keys [status]}] {:http-status status})}
+      (handler request))))
 
 ;; Atlassian middleware -----------------------------------------------------
 (defn verify-atlassian-iframe
