@@ -65,10 +65,10 @@
                    :req-un [::access_token ::scope ::bot_user_id ::app_id ::team ::authed_user])
    :error-response ::error-response))
 
-;; App uninstallation
+;; App uninstallation -------------------------------------------
 (spec/def ::apps-uninstall
   (spec/or
-   :ok-response (spec/keys :req-un [::ok])
+   :good-response (spec/keys :req-un [::ok])
    :error-response ::api-error))
 
 ;; Slash commands are sent via POST requests with Content-type application/x-www-form-urlencoded.
@@ -111,48 +111,43 @@
 ;; When the user submits the modal, Slack sends an "interaction payload" of type "view_submission"
 ;; See official docs in https://api.slack.com/reference/interaction-payloads/views
 ;; See example payload in test/jcpsantiago/arqivist/api/slack/view_submission_payload.json
-(spec/def ::type string?)
-(spec/def ::callback_id string?)
-(spec/def ::value #{"once" "daily" "weekly"})
+(spec/def :interaction/type #{"modal" "view_submission" "view_closed"})
+(spec/def :interaction/callback_id string?)
+(spec/def :interaction/value #{"once" "daily" "weekly"})
 
-(spec/def ::selected_option
+(spec/def :interaction/selected_option
   (spec/keys
-   :req-un [::value]))
+   :req-un [:interaction/value]))
 
-(spec/def ::radio_buttons-action
+(spec/def :interaction/radio_buttons-action
   (spec/keys
-   :req-un [::selected_option]))
+   :req-un [:interaction/selected_option]))
 
-(spec/def ::archive_frequency_selector
+(spec/def :interaction/archive_frequency_selector
   (spec/keys
-   :req-un [::radio_buttons-action]))
+   :req-un [:interaction/radio_buttons-action]))
 
-(spec/def ::values
+(spec/def :interaction/values
   (spec/keys
-   :req-un [::archive_frequency_selector]))
+   :req-un [:interaction/archive_frequency_selector]))
 
-(spec/def ::state
+(spec/def :interaction/state
   (spec/keys
-   :req-un [::values]))
+   :req-un [:interaction/values]))
 
-(spec/def ::view
+(spec/def :interaction/view
   (spec/keys
-   :req-un [::id ::team_id ::type ::callback_id]))
+   :req-un [::id ::team_id :interaction/type :interaction/callback_id :interaction/state]))
 
 (spec/def ::view-submission-payload
   (spec/keys
-   :req-un [::type ::team ::user ::api_app_id ::token ::trigger_id ::view]))
+   :req-un [:interaction/type ::team ::user ::api_app_id ::token ::trigger_id :interaction/view]))
 
 ;; The "view_submission" payload is a form with one key "payload" containing a JSON string
+;; the JSON string follows the `view-submission-payload` spec
 (spec/def ::payload string?)
 (spec/def ::interaction-payload
   (spec/keys :req-un [::payload]))
-
-;; (spec/def ::view-body
-;;   (spec/keys
-;;    :req-un [::id ::type ::title ::submit ::blocks
-;;             ::private_metadata ::callback_id ::state
-;;             ::hash ::response_urls]))
 
 ;; Header parameters -------------------------------------------------------
 ;; Used to verify Slack requests
@@ -164,6 +159,7 @@
    :req-un [::x-slack-signature ::x-slack-request-timestamp]))
 
 ;; Internal representations ------------------------------------------------
+;; Slack team as stored in the production database
 (spec/def :slack_teams/id pos-int?)
 (spec/def :slack_teams/uuid uuid?)
 (spec/def :slack_teams/app_id string?)
