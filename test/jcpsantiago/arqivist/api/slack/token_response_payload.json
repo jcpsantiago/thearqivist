@@ -1,0 +1,17 @@
+{
+  "access_token": "...",
+  "app_id": "A03820TGWQH",
+  "scope": "channels:history,chat:write,chat:write.public,commands,groups:history,im:history,mpim:history,users:read,channels:join,channels:read,groups:read",
+  "token_type": "bot",
+  "team": {
+    "id": "T036J39LN48",
+    "name": "SoftPepe"
+  },
+  "ok": true,
+  "bot_user_id": "U0378QRBVUP",
+  "authed_user": {
+    "id": "U035UADB70S"
+  },
+  "is_enterprise_install": false,
+  "enterprise": null
+}
