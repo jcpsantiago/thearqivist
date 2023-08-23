@@ -7,27 +7,14 @@
 
 (defn routes
   "Routes invoked by Slack:
-   * shortcut — triggered after the user clicks the message shortcut button
-   * slash    — triggered after the user uses the `/arqive` slash command
-   * redirect — called as part of the OAuth process at the end of installation"
+   * slash         — triggered after the user uses the `/arqive` slash command
+   * interactivity — triggered after the user submits a modal
+   * redirect      — called as part of the OAuth process at the end of installation"
   [system]
   (let [wrap-verify-slack-request (partial middleware-arqivist/wrap-verify-slack-request (:slack-env system))
         wrap-add-slack-team-attributes (partial middleware-arqivist/wrap-add-slack-team-attributes (:db-connection system))]
     ["/slack"
      {:swagger {:tags ["Slack"]}}
-     ["/shortcut"
-      {:swagger {:externalDocs
-                 {:description "Slack docs about Message Shortcuts"
-                  :url "https://api.slack.com/interactivity/shortcuts/using#message_shortcuts"}}
-       :middleware [[wrap-verify-slack-request :verify-slack-request]]
-       :post
-       {:summary "Target for Message Shortcut interactions"
-        :description "This endpoint receives all interactions initiated by clicking the Message Shortcut button. It also receives all follow-up interactions with the use via modals."
-        ;; TODO: add the rest of the specs, not working yet
-        ;; :parameters {:body :jcpsantiago.arqivist.api.slack.spec/shortcut-body}
-        :responses {200 {:body string?}}
-        :handler handlers/message-shortcut}}]
-
      ["/interactivity"
       {:swagger {:externalDocs
                  {:description "Slack docs about Slash Commands"

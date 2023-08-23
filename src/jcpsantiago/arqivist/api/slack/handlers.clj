@@ -14,38 +14,6 @@
    [next.jdbc.sql :as sql]
    [ring.util.response :refer [bad-request response content-type]]))
 
-(defn message-action-handler
-  "Handles requests sent to /slack/shortcut with type `message_action`"
-  [_]
-  (mulog/log ::handling-slack-message-action
-             :local-time (java.time.LocalDateTime/now)))
-
-(defn view-submission-handler
-  "Handles requests sent to /slack/shortcut with type `view_submission`"
-  [_]
-  (mulog/log ::handling-slack-view-submission
-             :local-time (java.time.LocalDateTime/now)))
-
-;; Shortcut entrypoint
-(defn message-shortcut
-  "Handler function for /slack/shortcut route,
-  NOTE: request validated via form parameters in router definition using jcpsantiago.arqivist.api.slack.spec
-  Arguments: TODO"
-  [{{{{payload-type :type} :payload} :form} :parameters}]
-  (mulog/log ::handling-slack-shortcut
-             :local-time (java.time.LocalDateTime/now))
-
-  (future
-    (case payload-type
-      "message_action" (message-action-handler "placeholder")
-      "view_submission" (view-submission-handler "placeholder")
-      "Payload of unknown type received, swiftly ignored."))
-
-  ;; Immediate response to Slack
-  {:status 200
-   :body ""
-   :headers {}})
-
 ;;
 ;; ------------------------------------------------------
 ;; Handlers for Slack Slash commands
@@ -113,12 +81,12 @@
 
       (mulog/with-context
        context
-       (mulog/log ::interaction-payload
-                  :local-time (java.time.LocalDateTime/now))
-       (case type
-         "view_submission" (view-submission request)
-         "message_action" "TODO"
-         (bad-request "Unknown type"))))))
+        (mulog/log ::interaction-payload
+                   :local-time (java.time.LocalDateTime/now))
+        (case type
+          "view_submission" (view-submission request)
+          "message_action" "TODO"
+          (bad-request "Unknown type"))))))
 
 (defn slash-command
   "
