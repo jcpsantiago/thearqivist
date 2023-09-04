@@ -1,0 +1,249 @@
+{
+  "ok": true,
+  "messages": [
+    {
+      "client_msg_id": "...",
+      "type": "message",
+      "text": "or post URLs <https://github.com/jcpsantiago/thearqivist>",
+      "user": "...",
+      "ts": "1692094149.392769",
+      "blocks": [
+        {
+          "type": "rich_text",
+          "block_id": "v0C",
+          "elements": [
+            {
+              "type": "rich_text_section",
+              "elements": [
+                {
+                  "type": "text",
+                  "text": "or post URLs "
+                },
+                {
+                  "type": "link",
+                  "url": "https://github.com/jcpsantiago/thearqivist"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "team": "...",
+      "attachments": [
+        {
+          "from_url": "https://github.com/jcpsantiago/thearqivist",
+          "image_url": "https://opengraph.githubassets.com/e25aa2be360052a768126869398a7929711e944f2d6481417655a54cad942f2c/jcpsantiago/thearqivist",
+          "image_width": 1200,
+          "image_height": 600,
+          "image_bytes": 161013,
+          "service_icon": "https://a.slack-edge.com/80588/img/unfurl_icons/github.png",
+          "id": 1,
+          "original_url": "https://github.com/jcpsantiago/thearqivist",
+          "fallback": "GitHub: GitHub - jcpsantiago/thearqivist: Backup Slack and create Confluence pages from your important conversations.",
+          "text": "Backup Slack and create Confluence pages from your important conversations. - GitHub - jcpsantiago/thearqivist: Backup Slack and create Confluence pages from your important conversations.",
+          "title": "GitHub - jcpsantiago/thearqivist: Backup Slack and create Confluence pages from your important conversations.",
+          "title_link": "https://github.com/jcpsantiago/thearqivist",
+          "service_name": "GitHub"
+        }
+      ]
+    },
+    {
+      "client_msg_id": "...",
+      "type": "message",
+      "text": "<@...> <@...> I can also call other users and/or bots",
+      "user": "..",
+      "ts": "1692094128.770839",
+      "blocks": [
+        {
+          "type": "rich_text",
+          "block_id": "d8vDM",
+          "elements": [
+            {
+              "type": "rich_text_section",
+              "elements": [
+                {
+                  "type": "user",
+                  "user_id": "..."
+                },
+                {
+                  "type": "text",
+                  "text": " "
+                },
+                {
+                  "type": "user",
+                  "user_id": "..."
+                },
+                {
+                  "type": "text",
+                  "text": " I can also call other users and/or bots"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "team": "..."
+    },
+    {
+      "client_msg_id": "...",
+      "type": "message",
+      "text": "this is a thread",
+      "user": "...",
+      "ts": "1692094102.232609",
+      "blocks": [
+        {
+          "type": "rich_text",
+          "block_id": "gpxS",
+          "elements": [
+            {
+              "type": "rich_text_section",
+              "elements": [
+                {
+                  "type": "text",
+                  "text": "this is a thread"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "team": "...",
+      "thread_ts": "1692094102.232609",
+      "reply_count": 2,
+      "reply_users_count": 1,
+      "latest_reply": "1692094111.755889",
+      "reply_users": [
+        "..."
+      ],
+      "is_locked": false,
+      "subscribed": false
+    },
+    {
+      "client_msg_id": "7a9e110d-3b47-4caa-96b6-5709bce5f984",
+      "type": "message",
+      "text": "hello!",
+      "user": "...",
+      "ts": "1692094100.038369",
+      "blocks": [
+        {
+          "type": "rich_text",
+          "block_id": "kPkj",
+          "elements": [
+            {
+              "type": "rich_text_section",
+              "elements": [
+                {
+                  "type": "text",
+                  "text": "hello!"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "team": "..."
+    },
+    {
+      "type": "message",
+      "subtype": "bot_message",
+      "text": "New alert triggered for Arqivist errors",
+      "ts": "1691945000.920289",
+      "bot_id": "...",
+      "blocks": [
+        {
+          "type": "section",
+          "block_id": "L5ra",
+          "text": {
+            "type": "mrkdwn",
+            "text": "*New alert triggered for Arqivist errors*",
+            "verbatim": false
+          }
+        }
+      ],
+      "attachments": [
+        {
+          "id": 1,
+          "blocks": [
+            {
+              "type": "section",
+              "block_id": "iYu",
+              "text": {
+                "type": "mrkdwn",
+                "text": "*Condition:* More than 0 lines within 30 seconds\n*Alert value:* 5\n*Query string:* ```ERROR```",
+                "verbatim": false
+              }
+            },
+            {
+              "type": "image",
+              "block_id": "UyBU",
+              "image_url": "...",
+              "alt_text": "Alert chart",
+              "image_width": 2250,
+              "image_height": 1125,
+              "image_bytes": 49087,
+              "is_animated": true,
+              "fallback": "2250x1125px image"
+            },
+            {
+              "type": "actions",
+              "block_id": "LjRul",
+              "elements": [
+                {
+                  "type": "button",
+                  "action_id": "P+fA",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "Open view",
+                    "emoji": true
+                  },
+                  "style": "primary",
+                  "url": "..."
+                },
+                {
+                  "type": "button",
+                  "action_id": "+3j",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "Configure this alert",
+                    "emoji": true
+                  },
+                  "url": "..."
+                }
+              ]
+            },
+            {
+              "type": "context",
+              "block_id": "X0xMH",
+              "elements": [
+                {
+                  "type": "image",
+                  "image_url": "...",
+                  "alt_text": "Better Stack"
+                },
+                {
+                  "type": "mrkdwn",
+                  "text": "Better Stack | Triggered at <!date^1691944975^{date_pretty} at {time_secs}|11:42:55am EST>",
+                  "verbatim": false
+                }
+              ]
+            }
+          ],
+          "color": "#de3618",
+          "fallback": "[no preview available]"
+        }
+      ]
+    }
+  ],
+  "has_more": true,
+  "is_limited": false,
+  "pin_count": 0,
+  "channel_actions_ts": null,
+  "channel_actions_count": 0,
+  "warning": "missing_charset",
+  "response_metadata": {
+    "next_cursor": "...",
+    "warnings": [
+      "missing_charset"
+    ]
+  }
+}
