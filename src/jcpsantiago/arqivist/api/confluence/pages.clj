@@ -132,7 +132,7 @@
        [:p {:style "text-align: center;"}
         [:span {:style "color: rgb(151,160,175);"} "The End"]])))))
 
-(defn create-content-bodyWWWWW
+(defn create-content-body
   [{:keys [channel-name]} page-html]
   {:type "page"
    :title channel-name
