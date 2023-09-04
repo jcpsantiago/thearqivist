@@ -102,7 +102,7 @@
   Takes a seq of page-rows (see page-row fn) and returns an HTML string.
   "
   [job page-rows]
-  (let [{:keys [user-name timezone domain channel-id channel-name]} job
+  (let [{:keys [user-name timezone domain channel-id]} job
         channel-url (str "https://" domain ".slack.com/archives/" channel-id)]
     (str
      (html
