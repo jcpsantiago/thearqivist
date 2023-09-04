@@ -6,8 +6,86 @@
    [com.brunobonacci.mulog :as mulog]
    [jcpsantiago.arqivist.api.slack.pages :as pages]
    [next.jdbc.sql :as sql]
-   [ring.util.response :refer [response content-type]]))
+   [ring.util.response :refer [response content-type]]
+   [clj-slack.conversations :as slack-convo]
+   [clj-slack.users :as slack-users]
+   [clj-slack.bots :as slack-bots]))
 
+(def slack-users-info (memoize slack-users/info))
+(def slack-bots-info  (memoize slack-bots/info))
+
+(defn fetch-messages
+  "
+  Fetches messages from a channel or message thread, iterating over
+  the response in case it is paginated.
+  "
+  ([slack-connection channel-id]
+   (iteration
+    (fn [k]
+      (slack-convo/history slack-connection channel-id {:cursor k}))
+    :kf (fn [res] (get-in res [:response_metadata :next_cursor]))
+    :vf :messages
+    :initk ""
+    :somef :messages))
+  ([slack-connection channel-id thread-ts]
+   (iteration
+    (fn [k]
+      (slack-convo/replies slack-connection channel-id thread-ts {:cursor k}))
+    :kf (fn [res] (get-in res [:response_metadata :next_cursor]))
+    :vf :messages
+    :initk ""
+    :somef :messages)))
+
+(defn fetch-replies
+  "
+  Fetches replies if message is a thread parent, otherwise returns the original message.
+  Adds a new keyword :replies to the message hash-map.
+  "
+  [message slack-connection channel-id]
+  (if (contains? message :thread_ts)
+    (assoc message :replies (->> (fetch-messages slack-connection channel-id (:thread_ts message))
+                                 (sequence cat)
+                                 ;; NOTE: the first message is the thread initiator
+                                 rest))
+    message))
+
+(defn fetch-conversation-history
+  "
+  Fetches messages from a Slack conversation, including replies in threads.
+  Returns a list of Slack conversations
+  "
+  [channel-id slack-connection]
+  (try
+    (let [messages (->> (fetch-messages slack-connection channel-id)
+                        ;; FIXME: we are looping twice over all messages
+                        ;; Once to fetch all messages, then again to fetch all replies.
+                        ;; Find a way to avoid a second map over _all_ messages
+                        ;; e.g. get the replies when fetching messages initially?
+                        ;; I didn't do it because it felt too much for a single fn
+                        (sequence cat)
+                        (map #(fetch-replies % slack-connection channel-id)))]
+      (mulog/log ::fetching-conversation-history
+                 :success :true)
+      messages)
+    (catch Exception e
+      (mulog/log ::fetching-conversation-history
+                 :success :false
+                 :error (.getMessage e)
+                 :exception e
+                 :local-time (java.time.LocalDateTime/now)))))
+
+(defn detect-bot-user
+  "
+  Adds a :bot? key to a message hash-map indicating whether the message is from a bot or not.
+  "
+  [message]
+  (let [bot? (or
+              (contains? message :bot_profile)
+              (contains? message :bot_id)
+              (= (:subtype_message message) "bot_message"))]
+    (assoc message :bot? bot?)))
+
+;; DB fns -----------------------------------------------------------------------
 (defn insert-slack-team!
   "
   Inserts information about a Slack team into the 'slack_teams' db table.

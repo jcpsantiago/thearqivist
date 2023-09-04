@@ -3,9 +3,12 @@
   (:require
    [clj-slack.oauth :as slack-oauth]
    [clj-slack.views :as slack-views]
+   [clj-slack.users :as slack-users]
    [clojure.spec.alpha :as spec]
    [clojure.string :refer [trim]]
    [com.brunobonacci.mulog :as mulog]
+   [jcpsantiago.arqivist.messages :as messages]
+   [jcpsantiago.arqivist.specs :as core-specs]
    [jcpsantiago.arqivist.api.slack.ui-blocks :as ui]
    [jcpsantiago.arqivist.api.slack.pages :as pages]
    [jcpsantiago.arqivist.api.slack.specs :as specs]
@@ -14,43 +17,109 @@
    [next.jdbc.sql :as sql]
    [ring.util.response :refer [bad-request response content-type]]))
 
-(defn message-action-handler
-  "Handles requests sent to /slack/shortcut with type `message_action`"
-  [_]
-  (mulog/log ::handling-slack-message-action
-             :local-time (java.time.LocalDateTime/now)))
+;;
+;; ------------------------------------------------------
+;; Handlers for Slack interactivity
+;;
 
-(defn view-submission-handler
-  "Handles requests sent to /slack/shortcut with type `view_submission`"
-  [_]
-  (mulog/log ::handling-slack-view-submission
-             :local-time (java.time.LocalDateTime/now)))
+(defn request->job
+  "
+  Creates a `job` from a ring request sent via the /interactivity endpoint.
+  "
+  [action request]
+  (let [slack-connection (:slack-connection request)
+        registering_user (get-in request [:slack-team-attributes :slack_teams/registering_user])
+        {:keys [tz real_name]} (-> (slack-users/info slack-connection registering_user) :user)
+        view (get-in request [:parameters :form :payload :view])
+        {:keys [channel_id channel_name user_id domain]} (-> view :private_metadata read-string)
+        frequency (get-in view [:state :values :archive_frequency_selector
+                                :radio_buttons-action :selected_option :value])
+        job-map {:target :confluence :action action :frequency frequency :channel-id channel_id
+                 :channel-name (str "#" channel_name) :user-id user_id :user-name real_name
+                 :timezone tz :created-at (java.time.Instant/now) :domain domain}
+        job (spec/conform ::core-specs/job job-map)]
 
-;; Shortcut entrypoint
-(defn message-shortcut
-  "Handler function for /slack/shortcut route,
-  NOTE: request validated via form parameters in router definition using jcpsantiago.arqivist.api.slack.spec
-  Arguments: TODO"
-  [{{{{payload-type :type} :payload} :form} :parameters}]
-  (mulog/log ::handling-slack-shortcut
+    (if (spec/invalid? job)
+      ;; FIXME: throw here? we have to do something :D
+      (mulog/log ::request->job
+                 :success :false
+                 :job job
+                 :job-map job-map
+                 :view view
+                 :request request
+                 :explanation (spec/explain-data ::core-specs/job job-map))
+      job)))
+
+(defn start-job
+  "
+  Collects the data needed to create a `job`, then sends it to the scribe for archival.
+  Meant to run async, because the scribe can be slow.
+  "
+  [action system request]
+  (mulog/log ::start-job-1 :request request :system system :action action)
+  (let [atlassian_tenant_id (get-in request [:slack-team-attributes :slack_teams/atlassian_tenant_id])
+        confluence-tenant-attributes (sql/get-by-id
+                                      (:db-connection system)
+                                      :atlassian_tenants
+                                      atlassian_tenant_id)
+        job (request->job action request)]
+    (mulog/log ::start-job
+               :source :user-interaction
+               :job job
+               :confluence-tenant confluence-tenant-attributes
+               :local-time (java.time.LocalDateTime/now))
+    (messages/the-scribe
+     job
+     (:slack-connection request)
+     confluence-tenant-attributes)))
+
+(defn view-submission
+  "
+  Creates a job to save a channel with a user-selected frequency in the setup-archival-modal.
+  Also updates the view with feedback for the user.
+  "
+  [system request]
+  (mulog/log ::view-submitted
              :local-time (java.time.LocalDateTime/now))
+  (let [context (mulog/local-context)]
+    ;; start archival job in a different thread, because it might take time
+    (future
+      (mulog/with-context
+       context
+       (start-job "create" system request)))
+    ;; immediate response with an updated modal giving feedback to user
+    (-> {:response_action "update"
+         :view (ui/confirm-job-started-modal request)}
+        json/write-value-as-string
+        response
+        (content-type "application/json"))))
 
-  (future
-    (case payload-type
-      "message_action" (message-action-handler "placeholder")
-      "view_submission" (view-submission-handler "placeholder")
-      "Payload of unknown type received, swiftly ignored."))
+(defn interaction-handler
+  "
+  Ring handler for user interactions with modals and shortcuts.
+  This is activated when users submit a modal (a 'view_submission'), or
+  interact with a message shortcut (a 'message_action').
+  "
+  [system]
+  (fn [{{{{:keys [type team user] :as payload} :payload} :form} :parameters :as request}]
+    (let [context {:type type
+                   :team (:id team)
+                   :user (:id user)
+                   :frequency (get-in payload [:view :state :values :archive_frequency_selector :radio_buttons-action :selected_option :value])}]
 
-  ;; Immediate response to Slack
-  {:status 200
-   :body ""
-   :headers {}})
+      (mulog/with-context
+       context
+       (mulog/log ::interaction-payload
+                  :local-time (java.time.LocalDateTime/now))
+       (case type
+         "view_submission" (view-submission system request)
+         "message_action" "TODO"
+         (bad-request "Unknown type"))))))
 
 ;;
 ;; ------------------------------------------------------
-;; Handlers for Slack Slash commands
+;; Handlers for the `/arqive` slash command
 ;;
-
 (defn help-message
   "
   Creates a response with information on how to use The Arqivist.
@@ -88,37 +157,6 @@
                    :response_metadata (:response_metadata res)
                    :local-time (java.time.LocalDateTime/now))
         (bad-request "")))))
-
-(defn view-submission
-  "
-  Creates a job to save a channel with a user-selected frequency in the setup-archival-modal.
-  Also updates the view with feedback for the user.
-  "
-  [request]
-  (mulog/log ::view-submitted
-             :local-time (java.time.LocalDateTime/now))
-  (-> {:response_action "update"
-       :view (ui/confirm-job-started-modal request)}
-      json/write-value-as-string
-      response
-      (content-type "application/json")))
-
-(defn interaction-handler
-  [_]
-  (fn [{{{{:keys [type team user] :as payload} :payload} :form} :parameters :as request}]
-    (let [context {:type type
-                   :team (:id team)
-                   :user (:id user)
-                   :frequency (get-in payload [:view :state :values :archive_frequency_selector :radio_buttons-action :selected_option :value])}]
-
-      (mulog/with-context
-       context
-       (mulog/log ::interaction-payload
-                  :local-time (java.time.LocalDateTime/now))
-       (case type
-         "view_submission" (view-submission request)
-         "message_action" "TODO"
-         (bad-request "Unknown type"))))))
 
 (defn slash-command
   "
