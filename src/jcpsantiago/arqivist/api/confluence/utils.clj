@@ -8,7 +8,7 @@
    [buddy.sign.jwt :as jwt]
    [clojure.string :as string]
    [org.httpkit.client :as httpkit]
-   [java-time :as t]
+   [java-time.api :as java-time]
    [jsonista.core :as jsonista]
    [ring.util.codec :refer [url-encode]]))
 
@@ -57,16 +57,15 @@
   Calculates the JWT token for requests sent to Confluence.
   "
   [descriptor-key shared-secret canonical-method canonical-uri & [params]]
-  ;; FIXME: replace fns from java-time with something else (java-time is deprecated)
   (let [claims {:iss descriptor-key
-                :iat (-> (t/instant)
-                         t/to-millis-from-epoch
+                :iat (-> (java-time/instant)
+                         java-time/to-millis-from-epoch
                          (quot 1000))
                 :qsh (-> (atlassian-canonical-query-string canonical-method canonical-uri params)
                          atlassian-query-string-hash)
-                :exp (-> (t/instant)
-                         (t/plus (t/seconds 9000))
-                         t/to-millis-from-epoch
+                :exp (-> (java-time/instant)
+                         (java-time/plus (java-time/seconds 9000))
+                         java-time/to-millis-from-epoch
                          (quot 1000))}]
     (jwt/sign claims shared-secret {:alg :hs256 :header {:typ "JWT"}})))
 
