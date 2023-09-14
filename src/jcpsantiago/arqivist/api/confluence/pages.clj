@@ -85,15 +85,19 @@
     (single-message-block message)))
 
 (defn card-link
+  "
+  Render a link as a card in Confluence, instead of a normal link.
+
+  Confluence's API complains about XHTML parsing problems if    
+  what we send them has unespaced ampersands. It took me a while
+  to figure this out -_-'                                       
+  "
   [url]
   (link-to
    {:data-card-appearance "block"
     :class "external-link"
     :rel "nofollow"}
    url
-   ;; confluence's API complains about XHTML parsing problems if
-   ;; what we send them has unespaced ampersands. It took me a while
-   ;; to figure this out -_-'
    (string/replace url #"&" "&amp;")))
 
 (defn archival-page
