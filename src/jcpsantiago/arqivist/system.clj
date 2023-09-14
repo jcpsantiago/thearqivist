@@ -87,7 +87,6 @@
 
            ;; these components and config are passed on to the running instance
            :config {:system {:db-connection (donut/ref [:db :db-connection])
-                             :cache (donut/ref [:cache :cache])
                              :atlassian-env (donut/ref [:env :atlassian])
                              :slack-env (donut/ref [:env :slack])}
                     :options {:port (donut/ref [:env :port])
@@ -96,7 +95,6 @@
 #_{:clj-kondo/ignore [:unused-binding]}
 (def system
   "The whole system:
-   * Cache        — atom to keep data between API calls
    * Event logger — mulog publishing as edn, json in prod (WIP)
    * Persistence  — migrations and db connection
    * Webserver    — http-kit"
@@ -132,10 +130,6 @@
                                  :max-lifetime 300000
                                  :jdbc-url (or (System/getenv "JDBC_DATABASE_URL")
                                                "jdbc:postgresql://localhost/arqivist?user=arqivist&password=arqivist")}}
-
-      ;; Cache component to hold data between API calls
-      ;; TODO: explore core.cache instead of just an atom
-      :cache {:cache #::donut{:start (atom {})}}
 
       ;; Event logger
       :event-log {:publisher event-logger}

@@ -15,29 +15,16 @@
         wrap-add-slack-team-attributes (partial middleware-arqivist/wrap-add-slack-team-attributes (:db-connection system))]
     ["/slack"
      {:swagger {:tags ["Slack"]}}
-     ["/shortcut"
-      {:swagger {:externalDocs
-                 {:description "Slack docs about Message Shortcuts"
-                  :url "https://api.slack.com/interactivity/shortcuts/using#message_shortcuts"}}
-       :middleware [[wrap-verify-slack-request :verify-slack-request]]
-       :post
-       {:summary "Target for Message Shortcut interactions"
-        :description "This endpoint receives all interactions initiated by clicking the Message Shortcut button. It also receives all follow-up interactions with the use via modals."
-        ;; TODO: add the rest of the specs, not working yet
-        ;; :parameters {:body :jcpsantiago.arqivist.api.slack.spec/shortcut-body}
-        :responses {200 {:body string?}}
-        :handler handlers/message-shortcut}}]
-
      ["/interactivity"
       {:swagger {:externalDocs
-                 {:description "Slack docs about Slash Commands"
-                  :url "https://api.slack.com/interactivity/slash-commands"}}
+                 {:description "Slack docs about interactivty"
+                  :url "https://api.slack.com/interactivity"}}
        :middleware [[wrap-verify-slack-request :verify-slack-request]
                     [middleware-arqivist/wrap-parse-interaction-payload "parse-interaction-payload"]
                     [wrap-add-slack-team-attributes :add-slack-team-attributes]]
        :post
-       {:summary "Target for Slash Command interactions"
-        :description "This endpoint receives all interactions initiated by typing the `/arqive` slash command."
+       {:summary "Target for responses from user interactions"
+        :description "This endpoint receives all interactions users have with modals."
         :parameters {:header ::specs/request-header-attributes
                      :form ::specs/interaction-payload}
         :responses {200 {:body string?}}

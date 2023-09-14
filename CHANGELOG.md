@@ -30,6 +30,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * Part of [#47](https://github.com/jcpsantiago/thearqivist/issues/47) Add modals for setting up and saving a channel
 * [#16](https://github.com/jcpsantiago/thearqivist/issues/16) Add specs and real-life examples of all Slack payloads
 * [#57](https://github.com/jcpsantiago/thearqivist/issues/57) Switch to clojure.java-time
+* [#47](https://github.com/jcpsantiago/thearqivist/issues/47) Save channel `once`
 
 ## 0.1.0 - 2023-04-20
 

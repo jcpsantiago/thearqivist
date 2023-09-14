@@ -3,7 +3,6 @@
   (:require
    [jcpsantiago.arqivist.middleware :as middleware-arqivist]
    [jcpsantiago.arqivist.api.confluence.handlers :as handlers]
-   [jcpsantiago.arqivist.api.confluence.pages :as pages]
    [jcpsantiago.arqivist.api.confluence.specs :as specs]))
 
 (defn routes
@@ -63,4 +62,4 @@
       :responses {200 {:body string?}}
       :middleware [[(middleware-arqivist/verify-atlassian-iframe system) :verify-atlassian-jwt]]
       :parameters {:query ::specs/iframe}
-      :handler (pages/get-started-handler system)}}]])
+      :handler (handlers/get-started system)}}]])

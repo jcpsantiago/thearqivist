@@ -40,12 +40,16 @@
   Modal asking the user to confirm saving a channel once.
   "
   [request]
-  (let [channel_name (get-in request [:parameters :form :channel_name])]
+  (let [{{{:keys [team_domain channel_name channel_id user_id user_name]} :form} :parameters} request]
     {:type "modal"
      :title {:type "plain_text" :text "The Arqivist" :emoji true}
      :submit {:type "plain_text" :text "Create archive" :emoji true}
      :close {:type "plain_text" :text "Cancel" :emoji true}
-     :private_metadata (pr-str {:channel_name channel_name})
+     :private_metadata (pr-str {:channel_name channel_name
+                                :channel_id channel_id
+                                :user_name user_name
+                                :user_id user_id
+                                :domain team_domain})
      :blocks
      [{:type "section"
        :text
