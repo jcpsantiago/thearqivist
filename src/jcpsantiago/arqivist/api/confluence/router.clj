@@ -62,4 +62,4 @@
       :responses {200 {:body string?}}
       :middleware [[(middleware-arqivist/verify-atlassian-iframe system) :verify-atlassian-jwt]]
       :parameters {:query ::specs/iframe}
-      :handler (handlers/get-started-handler system)}}]])
+      :handler (handlers/get-started system)}}]])
