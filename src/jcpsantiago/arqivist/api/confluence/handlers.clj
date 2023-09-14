@@ -247,7 +247,7 @@
                             "enabled" (enabled lifecycle-payload atlassian_tenant system)
                             "uninstalled" (uninstalled lifecycle-payload atlassian_tenant system))))))
 
-(defn get-started-handler
+(defn get-started
   "
   Handler to render the 'Get started' page in Confluence.
   This page is used to connect Confluence to Slack via the 'Add to Slack' button.
