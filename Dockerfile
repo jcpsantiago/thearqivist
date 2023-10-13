@@ -16,7 +16,7 @@
 # ------------------------
 # Setup Builder container
 
-FROM arm64v8/clojure:temurin-17-alpine AS builder
+FROM arm64v8/clojure:temurin-17-tools-deps-1.11.1.1413-jammy AS builder
 
 # Set Clojure CLI version (defaults to latest release)
 # ENV CLOJURE_VERSION=1.11.1.1155
