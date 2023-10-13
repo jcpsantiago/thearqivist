@@ -8,6 +8,7 @@
   ;; System
   party.donut/system {:mvn/version "0.0.203"}
   buddy/buddy-sign {:mvn/version "3.4.333"}
+
   clojure.java-time/clojure.java-time {:mvn/version "1.2.0"}
 
   ;; Logging
@@ -32,9 +33,9 @@
   metosin/jsonista {:mvn/version "0.3.7"}
 
   ;; Slack
-  io.github.jcpsantiago/clj-slack {:git/sha "da7432c" :git/tag "v0.8.2"}
+  ;; io.github.jcpsantiago/clj-slack {:git/sha "edd8af9" :git/tag "0.8.1"}
   ;; not using this until they merge the PR updating the OAuth method
-  ;; org.julienxx/clj-slack {:mvn/version "0.8.0"}
+  org.julienxx/clj-slack {:mvn/version "0.8.0"}
 
   ;; Webpages
   hiccup/hiccup {:mvn/version "2.0.0-alpha2"}}
