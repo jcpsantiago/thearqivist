@@ -1,13 +1,43 @@
 name: Build & Deploy
 
-on: [pull_request]
+on:
+  pull_request:
+    types: [labeled]
 
 jobs:
   build-and-deploy:
+    if: ${{ github.event.label.name == 'staging' }}
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Install clojure tools
+        uses: DeLaGuardo/setup-clojure@12.1
+        with:
+          bb: latest
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+      - run: make deps
+
+      - name: Make uberjar
+      - run: mkdir build && make dist
+
+      - uses: a7ul/tar-action@v1.1.0
+        with:
+          command: c
+          cwd: "./"
+          files: |
+            /build/target/jcpsantiago-thearqivist-standalone.jar
+            captain-definition
+          outPath: deploy.tar
 
       - name: Deploy App to CapRover
         uses: caprover/deploy-from-github@v1.0.1
