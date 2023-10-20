@@ -7,6 +7,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Setup Java
         uses: actions/setup-java@v3
         with:
@@ -17,15 +20,9 @@ jobs:
         uses: DeLaGuardo/setup-clojure@12.1
         with:
           bb: latest
-
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install dependencies
-        run: make deps
-
-      - name: Make uberjar
-        run: mkdir build && make dist
+      - run: make deps
+      - run: mkdir build
+      - run: make dist
 
       - uses: a7ul/tar-action@v1.1.0
         with:
