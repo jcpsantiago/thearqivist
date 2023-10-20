@@ -6,7 +6,7 @@ on:
 
 jobs:
   build-and-deploy:
-    if: ${{ github.event.label.name == 'staging' }}
+    if: (github.event.pull_request.labels.*.name, 'staging')
     runs-on: ubuntu-latest
 
     steps:
