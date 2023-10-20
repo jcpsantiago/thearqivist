@@ -61,13 +61,13 @@
       (do
         (mulog/log ::scribe-archive
                    :success :false
-                   :local-time (java.time.LocalDateTime/now))
-        (slack-chat/post-ephemeral
-         slack-connection
-         channel-id
-         (str "<@" user-id "> there was a problem archiving this channel. "
-              "I've alerted my supervisor, and a fix will be deployed ASAP so please try again later.\n"
-              "In case the error persists, please contact supervisor@arqivist.app directly and share the"
-              "error code: `" (:mulog/root-trace (mulog/local-context)) "`.")
-         ;; FIXME: HACK UNTIL THE FIX IS MERGED IN UPSTREAM
-         {:user user-id})))))
+                   :local-time (java.time.LocalDateTime/now))))))
+        ;; (slack-chat/post-ephemeral
+        ;;  slack-connection
+        ;;  channel-id
+        ;;  (str "<@" user-id "> there was a problem archiving this channel. "
+        ;;       "I've alerted my supervisor, and a fix will be deployed ASAP so please try again later.\n"
+        ;;       "In case the error persists, please contact supervisor@arqivist.app directly and share the"
+        ;;       "error code: `" (:mulog/root-trace (mulog/local-context)) "`.")
+        ;;  ;; FIXME: HACK UNTIL THE FIX IS MERGED IN UPSTREAM
+        ;;  {:user user-id})))))

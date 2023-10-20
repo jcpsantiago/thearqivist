@@ -39,9 +39,11 @@
   (if (:bot? message)
     (if (:bot_profile message)
       (assoc message :user-name (get-in message [:bot_profile :name]))
-      (->> (slack-utils/slack-bots-info slack-connection (:bot_id message))
-           :bot :name
-           (assoc message :user-name)))
+      ;; FIXME: ONLY SO THAT IT COMPILES FOR CAPROVER
+      "foo")
+      ;; (->> (slack-utils/slack-bots-info slack-connection (:bot_id message))
+      ;;      :bot :name
+      ;;      (assoc message :user-name)))
     (->> (slack-utils/slack-users-info slack-connection (:user message))
          :user :real_name
          (assoc message :user-name))))

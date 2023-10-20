@@ -8,11 +8,11 @@
    [next.jdbc.sql :as sql]
    [ring.util.response :refer [response content-type]]
    [clj-slack.conversations :as slack-convo]
-   [clj-slack.users :as slack-users]
-   [clj-slack.bots :as slack-bots]))
+   [clj-slack.users :as slack-users]))
+   ;; [clj-slack.bots :as slack-bots]))
 
 (def slack-users-info (memoize slack-users/info))
-(def slack-bots-info  (memoize slack-bots/info))
+;; (def slack-bots-info  (memoize slack-bots/info))
 
 (defn fetch-messages
   "

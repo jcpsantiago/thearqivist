@@ -21,7 +21,6 @@ jobs:
         with:
           cli: latest
       - run: make deps
-      - run: mkdir build
       - run: make dist
 
       - uses: a7ul/tar-action@v1.1.0
@@ -29,7 +28,7 @@ jobs:
           command: c
           cwd: "./"
           files: |
-            /build/target/jcpsantiago-thearqivist-standalone.jar
+            /target/jcpsantiago-thearqivist-standalone.jar
             captain-definition
           outPath: deploy.tar
 
