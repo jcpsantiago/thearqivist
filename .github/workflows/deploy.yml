@@ -25,7 +25,6 @@ jobs:
         uses: DeLaGuardo/setup-clojure@12.1
         with:
           cli: latest
-      - run: make deps
       - run: make dist
 
       - uses: a7ul/tar-action@v1.1.0
