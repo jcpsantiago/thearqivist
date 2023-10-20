@@ -7,6 +7,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Extract branch name
+        shell: bash
+        run: echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
+        id: extract_branch
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -30,11 +35,13 @@ jobs:
           files: |
             target/jcpsantiago-thearqivist-standalone.jar
             captain-definition
+            caprover-dockerfile
           outPath: deploy.tar
 
       - name: Deploy App to CapRover
-        uses: caprover/deploy-from-github@v1.0.1
+        uses: caprover/deploy-from-github@main
         with:
           server: "${{ secrets.CAPROVER_SERVER }}"
           app: "${{ secrets.APP_NAME }}"
           token: "${{ secrets.APP_TOKEN }}"
+          branch: ${{ steps.extract_branch.outputs.branch }}
