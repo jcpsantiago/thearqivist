@@ -25,10 +25,10 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install dependencies
-      - run: make deps
+        run: make deps
 
       - name: Make uberjar
-      - run: mkdir build && make dist
+        run: mkdir build && make dist
 
       - uses: a7ul/tar-action@v1.1.0
         with:
