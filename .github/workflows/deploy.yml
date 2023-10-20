@@ -28,7 +28,7 @@ jobs:
           command: c
           cwd: "./"
           files: |
-            /target/jcpsantiago-thearqivist-standalone.jar
+            target/jcpsantiago-thearqivist-standalone.jar
             captain-definition
           outPath: deploy.tar
 

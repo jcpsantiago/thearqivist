@@ -1,0 +1,45 @@
+# Official OpenJDK Image
+FROM arm64v8/eclipse-temurin:17-alpine
+
+# Add operating system packages
+# - dumb-init to ensure SIGTERM sent to java process running Clojure service
+# - Curl and jq binaries for manual running of system integration scripts
+# check for newer package versions: https://pkgs.alpinelinux.org/
+RUN apk add --no-cache \
+    dumb-init~=1.2.5
+
+# Create Non-root group and user to run service securely
+RUN addgroup -S clojure && adduser -S clojure -G clojure
+
+# Create directory to contain service archive, owned by non-root user
+RUN mkdir -p /service && chown -R clojure. /service
+
+# Tell docker that all future commands should run as the appuser user
+USER clojure
+
+# Copy service archive file from Builder image
+WORKDIR /service
+ADD /build/target/jcpsantiago-thearqivist-standalone.jar /service/
+
+# ------------------------
+# Set Service Environment variables
+
+# ENV HTTP_SERVER_PORT=
+# ENV MYSQL_DATABASE=
+ENV SERVICE_PROFILE=prod
+
+# Expose port of HTTP Server
+EXPOSE 8080
+
+# ------------------------
+# Run service
+
+# JDK_JAVA_OPTIONS environment variable for setting JVM options
+# Use JVM options that optimise running in a container
+# For very low latency, use the Z Garbage collector "-XX:+UseZGC"
+ENV JDK_JAVA_OPTIONS "-XshowSettings:system -XX:+UseContainerSupport -XX:MaxRAMPercentage=90"
+
+# Start service using dumb-init and java run-time
+# (overrides `jshell` entrypoint - default in eclipse-temurin image)
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+CMD ["java", "-jar", "/service/jcpsantiago-thearqivist-standalone.jar"]
