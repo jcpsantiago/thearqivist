@@ -1,18 +1,3 @@
-# ------------------------------------------
-# Build and run Practicalli Gameboard API Service
-#
-# Author: Practicalli
-#
-# Builder image:
-# Official Clojure Docker image with Java 17 (eclipse-temurin) and Clojure CLI
-# https://hub.docker.com/_/clojure/
-#
-# Run-time image:
-# Official Java Docker image with Java 17 (eclipse-temurin)
-# https://hub.docker.com/_/eclipse-temurin
-# ------------------------------------------
-
-
 # ------------------------
 # Setup Builder container
 
@@ -51,23 +36,11 @@ RUN make dist
 # End of Docker builder image
 # ------------------------------------------
 
-
-# ------------------------------------------
-# Docker container to run Practicalli Gameboard API Service
-# run locally using: docker-compose up --build
-
 # ------------------------
 # Setup Run-time Container
 
 # Official OpenJDK Image
 FROM eclipse-temurin:17-alpine
-
-# Example labels for runtime docker image
-# LABEL org.opencontainers.image.authors="nospam+dockerfile@jcpsantiago.net.clojars.jcpsantiago"
-# LABEL net.clojars.jcpsantiago.jcpsantiago.thearqivist="jcpsantiago thearqivist"
-# LABEL io.github.practicalli.team="Practicalli Engineering Team"
-# LABEL version="0.1.0-SNAPSHOT"
-# LABEL description="jcpsantiago thearqivist service"
 
 # Add operating system packages
 # - dumb-init to ensure SIGTERM sent to java process running Clojure service
@@ -91,15 +64,9 @@ USER clojure
 WORKDIR /service
 COPY --from=builder /build/target/jcpsantiago-thearqivist-standalone.jar /service/
 
-# Optional: Add System Integration testing scripts
-# RUN mkdir -p /service/test-scripts
-# COPY --from=builder /build/test-scripts/curl--* /service/test-scripts/
-
-
 # ------------------------
 # Set Service Environment variables
 
-# optional over-rides for Integrant configuration
 # ENV HTTP_SERVER_PORT=
 # ENV MYSQL_DATABASE=
 ENV SERVICE_PROFILE=prod
@@ -125,11 +92,3 @@ ENV JDK_JAVA_OPTIONS "-XshowSettings:system -XX:+UseContainerSupport -XX:MaxRAMP
 # (overrides `jshell` entrypoint - default in eclipse-temuring image)
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 CMD ["java", "-jar", "/service/jcpsantiago-thearqivist-standalone.jar"]
-
-
-# Docker Entrypoint documentation
-# https://docs.docker.com/engine/reference/builder/#entrypoint
-
-# $kill PID For Graceful Shutdown(SIGTERM) - can be caught for graceful shutdown
-# $kill -9 PID For Forceful Shutdown(SIGKILL) - process ends immeciately
-# SIGSTOP cannot be intercepted, process ends immediately
