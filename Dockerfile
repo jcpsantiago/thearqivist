@@ -84,11 +84,11 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 CMD [ "curl --fail http://localhost:8080 || exit 1" ]
 
 # JDK_JAVA_OPTIONS environment variable for setting JVM options
-# Use JVM options that optomise running in a container
+# Use JVM options that optimise running in a container
 # For very low latency, use the Z Garbage collector "-XX:+UseZGC"
 ENV JDK_JAVA_OPTIONS "-XshowSettings:system -XX:+UseContainerSupport -XX:MaxRAMPercentage=90"
 
 # Start service using dumb-init and java run-time
-# (overrides `jshell` entrypoint - default in eclipse-temuring image)
+# (overrides `jshell` entrypoint - default in eclipse-temurin image)
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 CMD ["java", "-jar", "/service/jcpsantiago-thearqivist-standalone.jar"]
