@@ -19,7 +19,7 @@ USER clojure
 
 # Copy service archive file from Builder image
 WORKDIR /service
-ADD /build/target/jcpsantiago-thearqivist-standalone.jar /service/
+COPY /target/jcpsantiago-thearqivist-standalone.jar /service/
 
 # ------------------------
 # Set Service Environment variables
