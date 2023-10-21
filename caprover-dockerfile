@@ -1,5 +1,5 @@
 # Official OpenJDK Image
-FROM arm64v8/eclipse-temurin:17-alpine
+FROM arm64v8/eclipse-temurin:21-alpine
 
 # Add operating system packages
 # - dumb-init to ensure SIGTERM sent to java process running Clojure service
