@@ -31,9 +31,9 @@
 (def project-config
   "Project configuration to support all tasks"
   {:class-directory "target/classes"
-   :main-namespace  'jcpsantiago/thearqivist.service
+   :main-namespace  'jcpsantiago/arqivist.core
    :project-basis   (build-api/create-basis)
-   :uberjar-file    "target/jcpsantiago-thearqivist-standalone.jar"})
+   :uberjar-file    "target/thearqivist-standalone.jar"})
 
 (defn config
   "Display build configuration"
