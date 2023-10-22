@@ -19,7 +19,7 @@ USER clojure
 
 # Copy service archive file from Builder image
 WORKDIR /service
-COPY /target/jcpsantiago-thearqivist-standalone.jar /service/
+COPY /target/thearqivist-standalone.jar /service/
 
 # ------------------------
 # Set Service Environment variables
@@ -42,4 +42,4 @@ ENV JDK_JAVA_OPTIONS "-XshowSettings:system -XX:+UseContainerSupport -XX:MaxRAMP
 # Start service using dumb-init and java run-time
 # (overrides `jshell` entrypoint - default in eclipse-temurin image)
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
-CMD ["java", "-jar", "/service/jcpsantiago-thearqivist-standalone.jar"]
+CMD ["java", "-jar", "/service/thearqivist-standalone.jar"]
