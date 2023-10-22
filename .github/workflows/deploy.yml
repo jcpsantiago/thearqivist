@@ -1,17 +1,15 @@
 name: Build & Deploy
 
-on: [pull_request]
+on:
+  push:
+    branches:
+      - "main"
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Extract branch name
-        shell: bash
-        run: echo "branch=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}" >> $GITHUB_OUTPUT
-        id: extract_branch
-
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -43,4 +41,3 @@ jobs:
           server: "${{ secrets.CAPROVER_SERVER }}"
           app: "${{ secrets.APP_NAME }}"
           token: "${{ secrets.APP_TOKEN }}"
-          branch: ${{ steps.extract_branch.outputs.branch }}
