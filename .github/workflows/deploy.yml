@@ -27,7 +27,7 @@ jobs:
           command: c
           cwd: "./"
           files: |
-            target/jcpsantiago-thearqivist-standalone.jar
+            target/thearqivist-standalone.jar
             captain-definition
             caprover-dockerfile
           outPath: deploy.tar
