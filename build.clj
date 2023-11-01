@@ -24,16 +24,15 @@
    [clojure.tools.build.api :as build-api]
    [clojure.pprint :as pprint]))
 
-
 ;; ---------------------------------------------------------
 ;; Project configuration
 
 (def project-config
   "Project configuration to support all tasks"
   {:class-directory "target/classes"
-   :main-namespace  'jcpsantiago/thearqivist.service
+   :main-namespace  'jcpsantiago/arqivist.core
    :project-basis   (build-api/create-basis)
-   :uberjar-file    "target/jcpsantiago-thearqivist-standalone.jar"})
+   :uberjar-file    "target/thearqivist-standalone.jar"})
 
 (defn config
   "Display build configuration"
@@ -43,13 +42,11 @@
 ;; End of Build configuration
 ;; ---------------------------------------------------------
 
-
 ;; ---------------------------------------------------------
 ;; Testing tasks
 ;; - optionally include a test runner
 ;; End of Testing tasks
 ;; ---------------------------------------------------------
-
 
 ;; ---------------------------------------------------------
 ;; Build tasks
@@ -64,7 +61,6 @@
   (when
    (not (contains? #{"." "/"} directory))
     (build-api/delete {:path (or (:path directory) "target")})))
-
 
 (defn uberjar
   "Create an archive containing Clojure and the build of the project
@@ -87,7 +83,6 @@
 
 ;; End of Build tasks
 ;; ---------------------------------------------------------
-
 
 ;; ---------------------------------------------------------
 ;; Deployment tasks
