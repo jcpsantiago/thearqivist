@@ -1,16 +1,42 @@
 name: Build & Deploy
 
-on: [pull_request]
+on:
+  push:
+    branches:
+      - "main"
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Install clojure tools
+        uses: DeLaGuardo/setup-clojure@12.1
+        with:
+          cli: latest
+      - run: make dist
+
+      - uses: a7ul/tar-action@v1.1.3
+        with:
+          command: c
+          cwd: "./"
+          files: |
+            target/thearqivist-standalone.jar
+            captain-definition
+            caprover-dockerfile
+          outPath: deploy.tar
 
       - name: Deploy App to CapRover
-        uses: caprover/deploy-from-github@v1.0.1
+        uses: caprover/deploy-from-github@v1.1.2
         with:
           server: "${{ secrets.CAPROVER_SERVER }}"
           app: "${{ secrets.APP_NAME }}"
