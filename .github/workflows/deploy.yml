@@ -38,6 +38,6 @@ jobs:
       - name: Push to dokku
         uses: dokku/github-action@master
         with:
-          git_remote_url: "ssh://dokku@${{ secrets.DOKKU_DOMAIN }}:22/thearqivist"
+          git_remote_url: "ssh://dokku@${{ secrets.DOKKU_DOMAIN }}:22/thearqivist-prod"
           ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
           deploy_docker_image: ${{ github.repository }}:${{ github.sha }}
