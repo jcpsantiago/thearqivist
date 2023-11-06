@@ -1,7 +1,7 @@
 # ------------------------
 # Setup Builder container
 
-FROM clojure:temurin-17-alpine AS builder
+FROM clojure:temurin-21-alpine AS builder
 
 # Set Clojure CLI version (defaults to latest release)
 # ENV CLOJURE_VERSION=1.11.1.1155
@@ -40,7 +40,7 @@ RUN make dist
 # Setup Run-time Container
 
 # Official OpenJDK Image
-FROM eclipse-temurin:17-alpine
+FROM eclipse-temurin:21-alpine
 
 # Add operating system packages
 # - dumb-init to ensure SIGTERM sent to java process running Clojure service
