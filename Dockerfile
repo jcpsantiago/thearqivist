@@ -1,7 +1,7 @@
 # ------------------------
 # Setup Builder container
 
-FROM clojure:temurin-21-alpine AS builder
+FROM clojure:temurin-21-bookworm-slim AS builder
 
 # Set Clojure CLI version (defaults to latest release)
 # ENV CLOJURE_VERSION=1.11.1.1155
