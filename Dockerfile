@@ -44,12 +44,9 @@ FROM eclipse-temurin:17-alpine
 
 # Add operating system packages
 # - dumb-init to ensure SIGTERM sent to java process running Clojure service
-# - Curl and jq binaries for manual running of system integration scripts
 # check for newer package versions: https://pkgs.alpinelinux.org/
 RUN apk add --no-cache \
-    dumb-init~=1.2.5 \
-    curl~=8.0.1 \
-    jq~=1.6
+    dumb-init~=1.2.5
 
 # Create Non-root group and user to run service securely
 RUN addgroup -S clojure && adduser -S clojure -G clojure
@@ -62,7 +59,7 @@ USER clojure
 
 # Copy service archive file from Builder image
 WORKDIR /service
-COPY --from=builder /build/target/jcpsantiago-thearqivist-standalone.jar /service/
+COPY --from=builder /build/target/thearqivist-standalone.jar /service/
 
 # ------------------------
 # Set Service Environment variables
@@ -72,7 +69,7 @@ COPY --from=builder /build/target/jcpsantiago-thearqivist-standalone.jar /servic
 ENV SERVICE_PROFILE=prod
 
 # Expose port of HTTP Server
-EXPOSE 8080
+EXPOSE 8989
 
 # ------------------------
 # Run service
@@ -81,7 +78,7 @@ EXPOSE 8080
 # docker inspect --format='{{json .State.Health}}' container-name
 # - local heathcheck defined in `compose.yaml` service definition
 # TODO: Set URL in Dockerfile to point to deployed service
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 CMD [ "curl --fail http://localhost:8080 || exit 1" ]
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 CMD [ "curl --fail http://localhost:8989 || exit 1" ]
 
 # JDK_JAVA_OPTIONS environment variable for setting JVM options
 # Use JVM options that optimise running in a container
@@ -91,4 +88,4 @@ ENV JDK_JAVA_OPTIONS "-XshowSettings:system -XX:+UseContainerSupport -XX:MaxRAMP
 # Start service using dumb-init and java run-time
 # (overrides `jshell` entrypoint - default in eclipse-temurin image)
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
-CMD ["java", "-jar", "/service/jcpsantiago-thearqivist-standalone.jar"]
+CMD ["java", "-jar", "/service/thearqivist-standalone.jar"]
