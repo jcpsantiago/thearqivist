@@ -128,7 +128,7 @@
                                  :minimum-idle 2
                                  :idle-timeout 12000
                                  :max-lifetime 300000
-                                 :jdbc-url (or (System/getenv "JDBC_DATABASE_URL")
+                                 :jdbc-url (or (System/getenv "DATABASE_URL")
                                                "jdbc:postgresql://localhost/arqivist?user=arqivist&password=arqivist")}}
 
       ;; Event logger
