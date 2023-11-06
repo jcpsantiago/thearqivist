@@ -40,7 +40,7 @@ RUN make dist
 # Setup Run-time Container
 
 # Official OpenJDK Image
-FROM eclipse-temurin:21-alpine
+FROM eclipse-temurin:21-jre-alpine
 
 # Add operating system packages
 # - dumb-init to ensure SIGTERM sent to java process running Clojure service
