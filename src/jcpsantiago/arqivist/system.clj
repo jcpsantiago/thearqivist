@@ -43,8 +43,8 @@
   "
   [uri]
   (let [parsed (parse-db-uri uri)]
-    (into {:dbtype "postgresql"}
-          (zipmap [:user :password :host :port :dbname] parsed))))
+    (into {:adapter "postgresql"}
+          (zipmap [:username :password :server-name :port-number :database-name] parsed))))
 
 (defn database-uri
   "
