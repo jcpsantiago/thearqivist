@@ -3,6 +3,7 @@
    a REPL-heavy lifestyle."
   (:require
    [com.brunobonacci.mulog :as mulog]
+   [clojure.string :as string]
    [donut.system :as donut]
    [hikari-cp.core :as hikari]
    [org.httpkit.client :as http-client]
@@ -24,6 +25,36 @@
         :tunnels
         first
         :public_url)))
+
+(defn parse-db-uri
+  "
+  Splits a uri with shape
+  postgres://<username>:<password>@<host>:<port>/<dbname>
+  into parts
+  "
+  [uri]
+  (drop 1 (string/split uri #"://|:|@|/")))
+
+(defn create-map-from-uri
+  "
+  Takes a uri of the form postgres://<username>:<password>@<host>:<port>/<dbname>
+  and turns it into a map. This is needed because sometimes that's all we get e.g. from Dokku
+  see also https://github.com/dokku/dokku-redis/pull/131#issuecomment-1420780031
+  "
+  [uri]
+  (let [parsed (parse-db-uri uri)]
+    (into {:dbtype "postgresql"}
+          (zipmap [:user :password :host :port :dbname] parsed))))
+
+(defn database-uri
+  "
+  Returns a map with {:jdbc-url uri} when app-env = DEV,
+  or a map with :user :password :host :port and :dbname if used in prod
+  "
+  [uri app-env]
+  (if (= "dev" app-env)
+    {:jdbc-url uri}
+    (create-map-from-uri uri)))
 
 (def event-logger
   "mulog log publisher component"
@@ -103,11 +134,13 @@
   ;; * Add tasks with chime as task scheduler (using channels?)
   ;; * Add step to ensure critical env vars are not set/empty strings
 
-  (let [slack-redirect-uri (or (System/getenv "ARQIVIST_SLACK_REDIRECT_URI")
+  (let [service-profile (or (System/getenv "ARQIVIST_SERVICE_PROFILE") "dev")
+        slack-redirect-uri (or (System/getenv "ARQIVIST_SLACK_REDIRECT_URI")
                                (str (ngrok-tunnel-url) "/api/v1/slack/redirect"))]
     {::donut/defs
      {;; Environmental variables
-      :env {:atlassian {:vendor-name (or (System/getenv "ARQIVIST_VENDOR_NAME") "burstingburrito")
+      :env {:service-profile service-profile
+            :atlassian {:vendor-name (or (System/getenv "ARQIVIST_VENDOR_NAME") "burstingburrito")
                         :vendor-url (or (System/getenv "ARQIVIST_VENDOR_URL") "https://burstingburrito.com")
                         :base-url (or (System/getenv "ARQIVIST_BASE_URL") (ngrok-tunnel-url))
                         :descriptor-key (or (System/getenv "ARQIVIST_ATLASSIAN_DESCRIPTOR_KEY") "thearqivist-dev")
@@ -123,13 +156,15 @@
 
             :port (parse-long (or (System/getenv "ARQIVIST_PORT") "8989"))
 
-            :datasource-options {;; NOTE: No idea what each of these actually do, should learn :D
-                                 :maximum-pool-size 5
-                                 :minimum-idle 2
-                                 :idle-timeout 12000
-                                 :max-lifetime 300000
-                                 :jdbc-url (or (System/getenv "DATABASE_URL")
-                                               "jdbc:postgresql://localhost/arqivist?user=arqivist&password=arqivist")}}
+            :datasource-options (merge
+                                 {;; NOTE: No idea what each of these actually do, should learn :D
+                                  :maximum-pool-size 5
+                                  :minimum-idle 2
+                                  :idle-timeout 12000
+                                  :max-lifetime 300000}
+                                 (database-uri
+                                  (or (System/getenv "DATABASE_URL") "jdbc:postgresql://localhost/arqivist?user=arqivist&password=arqivist")
+                                  service-profile))}
 
       ;; Event logger
       :event-log {:publisher event-logger}
