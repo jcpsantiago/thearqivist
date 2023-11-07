@@ -68,9 +68,6 @@ COPY --from=builder /build/target/thearqivist-standalone.jar /service/
 # ENV MYSQL_DATABASE=
 ENV ARQIVIST_SERVICE_PROFILE=prod
 
-# Expose port of HTTP Server
-EXPOSE 8989
-
 # ------------------------
 # Run service
 

@@ -154,7 +154,9 @@
                                     "&redirect_uri=" slack-redirect-uri
                                     "&state=")}
 
-            :port (parse-long (or (System/getenv "ARQIVIST_PORT") "8989"))
+            :port (parse-long (or (System/getenv "PORT")
+                                  (System/getenv "ARQIVIST_PORT")
+                                  "8989"))
 
             :datasource-options (merge
                                  {;; NOTE: No idea what each of these actually do, should learn :D
