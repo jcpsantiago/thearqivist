@@ -33,7 +33,7 @@ jobs:
 
       # Git Checkout
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           token: "${{ secrets.PAT || secrets.GITHUB_TOKEN }}"
           fetch-depth: 0
@@ -43,7 +43,7 @@ jobs:
       - name: MegaLinter Run
         id: ml
         ## latest release of major version
-        uses: oxsecurity/megalinter/flavors/java@v6
+        uses: oxsecurity/megalinter/flavors/java@v7.5.0
         env:
           MEGALINTER_CONFIG: .github/config/megalinter.yaml
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}" # report individual linter status
@@ -54,7 +54,7 @@ jobs:
       # Upload MegaLinter artifacts
       - name: Archive production artifacts
         if: ${{ success() }} || ${{ failure() }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v3.1.3
         with:
           name: MegaLinter reports
           path: |
