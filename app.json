@@ -1,0 +1,13 @@
+{
+  "healthchecks": {
+    "web": [
+      {
+        "type": "readiness",
+        "name": "alive check",
+        "description": "Checking if the app responds to the /system-admin/status endpoint",
+        "path": "/system-admin/status",
+        "attempts": 3
+      }
+    ]
+  }
+}
