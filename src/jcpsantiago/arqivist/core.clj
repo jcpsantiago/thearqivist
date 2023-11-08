@@ -7,13 +7,6 @@
    [com.brunobonacci.mulog :as mulog]))
 
 ;; ---------------------------------------------------------
-;; Start Mulog publisher - only once
-
-#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
-(defonce mulog-publisher
-  (mulog/start-publisher! {:type :console :pretty? true}))
-
-;; ---------------------------------------------------------
 ;; Application
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
@@ -31,7 +24,9 @@
   (let [team (first args)]
     (mulog/set-global-context!
      ;; TODO: get the version from a file or config, issue #23
-     {:app-name "The Arqivist" :version  "2023-11-07.1"})
+     {:app-name "The Arqivist"
+      :version  "2023-11-07.1"
+      :service-profile (System/getenv "ARQIVIST_SERVICE_PROFILE")})
     (mulog/log ::application-starup :arguments args)
     (if team
       (greet team)

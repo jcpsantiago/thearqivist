@@ -59,14 +59,16 @@
 (def event-logger
   "mulog log publisher component"
   #::donut{:start (fn mulog-publisher-start
-                    [{{:keys [dev]} ::donut/config}]
-                    (mulog/start-publisher! dev))
+                    [{{:keys [publisher-config]} ::donut/config}]
+                    (mulog/start-publisher! publisher-config))
 
            :stop (fn mulog-publisher-stop
                    [{::donut/keys [instance]}]
                    (instance))
 
-           :config {:dev {:type :console :pretty? true}}})
+           :config {:publisher-config (if (= "dev" (donut/ref [:env :service-profile]))
+                                        {:type :console-json :pretty? true}
+                                        {:type :console-json :pretty? false})}})
 
 (def migrations
   "Database migration component using migratus"
