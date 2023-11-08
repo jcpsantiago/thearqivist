@@ -25,7 +25,7 @@
     (mulog/set-global-context!
      ;; TODO: get the version from a file or config, issue #23
      {:app-name "The Arqivist"
-      :version  "2023-11-07.1"
+      :version  "2023-11-08.1"
       :service-profile (System/getenv "ARQIVIST_SERVICE_PROFILE")})
     (mulog/log ::application-starup :arguments args)
     (if team
