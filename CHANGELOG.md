@@ -38,5 +38,3 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 ### Added
 
 * [#1](https://github.com/practicalli/clojure/issues/1) Created jcpsantiago/thearqivist project with deps-new using practicalli.template/service
-
-[Unreleased]: https://github.com/jcpsantiago/thearqivist/compare/0.1.1...HEAD
