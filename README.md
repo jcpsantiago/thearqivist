@@ -21,7 +21,7 @@ To run The Arqivist yourself you need
 
 * admin access to a Confluence account
 * admin access to a Slack workspace
-* a running instance of The Arqivist + a Postgres database
+* a running instance of The Arqivist + a Postgres database (see data model at [dbdiagram.io](https://dbdiagram.io/d/6551f3787d8bbd6465102527)
 
 ## Installing in Confluence
 
