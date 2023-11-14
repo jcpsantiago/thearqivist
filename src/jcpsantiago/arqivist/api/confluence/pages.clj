@@ -68,7 +68,8 @@
                     :ac:emoji-shortname ":arrow_heading_down:"
                     :ac:emoji-id "2935"
                     :ac:emoji-fallback "⤵"}]
-     " " ; just a spacer, an actual <br> would be too much visually
+     ;; just a spacer, an actual <br> would be too much visually
+     " "
      (status-macro "replies" "Blue")]
     (map single-message-block (:replies message))]])
 
