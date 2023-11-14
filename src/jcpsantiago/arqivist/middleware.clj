@@ -137,6 +137,9 @@
                 (assoc :slack-team-attributes slack-team-attributes)
                 (assoc :slack-connection slack-connection)
                 handler))
+
+          ;; TODO: handle invalid spec explicitly
+
           (nil? (:token slack-connection))
           (do
             (mulog/log ::add-slack-team-attributes
@@ -188,12 +191,12 @@
     ;; track the request duration and outcome
     (mulog/trace
      :io.redefine.datawarp/http-request
-     {:pairs [:content-type     (get-in request [:headers "content-type"])
-              :content-encoding (get-in request [:headers "content-encoding"])
-              :middleware       id]
+      {:pairs [:content-type     (get-in request [:headers "content-type"])
+               :content-encoding (get-in request [:headers "content-encoding"])
+               :middleware       id]
       ;; capture http status code from the response
-      :capture (fn [{:keys [status]}] {:http-status status})}
-     (handler request))))
+       :capture (fn [{:keys [status]}] {:http-status status})}
+      (handler request))))
 
 ;; Atlassian middleware -----------------------------------------------------
 (defn verify-atlassian-iframe
