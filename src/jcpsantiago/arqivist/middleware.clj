@@ -194,7 +194,7 @@
       {:pairs [:content-type     (get-in request [:headers "content-type"])
                :content-encoding (get-in request [:headers "content-encoding"])
                :middleware       id]
-      ;; capture http status code from the response
+       ;; capture http status code from the response
        :capture (fn [{:keys [status]}] {:http-status status})}
       (handler request))))
 
