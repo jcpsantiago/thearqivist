@@ -167,59 +167,60 @@
         (-> (sql/find-by-keys db-connection :slack_teams {:atlassian_tenant_id tenant_id})
             first)]
 
-    ;; drop the row corresponding to the current tenant, plus the row in  'slack_teams'
+    ;; drop the row corresponding to the current tenant, plus the row in 'slack_teams'
     (mulog/with-context {:slack-team-id external_team_id :slack-team-name team_name}
-                        (try
-                          (sql/delete! db-connection :atlassian_tenants {:id tenant_id})
-                          (mulog/log ::atlassian-tenant-dropped-from-db
-                                     :success :true
-                                     :local-time (java.time.LocalDateTime/now))
+      (try
+        (sql/delete! db-connection :atlassian_tenants {:id tenant_id})
+        (mulog/log ::atlassian-tenant-dropped-from-db
+                   :success :true
+                   :local-time (java.time.LocalDateTime/now))
 
-                          (if (empty? slack_team)
-                            ;; it's possible the user never connected their Slack workspace at all,
-                            ;; in which case we don't need to do anything else
-                            (response "OK")
+        (if (empty? slack_team)
+          ;; it's possible the user never connected their Slack workspace at all,
+          ;; in which case we don't need to do anything else
+          (response "OK")
 
-                            ;; if there's a slack team connected, we have to uninstall the app
-                            (let [res (-> @(httpkit/get
-                                            (str "https://slack.com/api/apps.uninstall?"
-                                                 "client_id=" (get-in system [:env :slack :arqivist-slack-client-id])
-                                                 "&client_secret=" (get-in system [:env :slack :arqivist-slack-client-secret]))
-                                            {:headers {"Content-Type" "application/json; charset=utf-8"}
-                                             :oauth-token access_token})
-                                          :body
-                                          (jsonista/read-value jsonista/keyword-keys-object-mapper))]
-                              (cond
-                                (spec/invalid? (spec/conform ::slack-specs/apps-uninstall res))
-                                (do
-                                  (mulog/log ::uninstalled-from-slack
-                                             :success :false
-                                             :error "Slack API response did not conform to spec"
-                                             :spec-explain (spec/explain ::slack-specs/apps-uninstall res)
-                                             :local-time (java.time.LocalDateTime/now))
-                                  (-> {:status 500 :body "Couldn't uninstall from Slack, got invalid response"} (content-type "text-plain")))
+          ;; if there's a slack team connected, we have to uninstall the app
+          (let [res (-> @(httpkit/get
+                          (str "https://slack.com/api/apps.uninstall?"
+                               "client_id=" (get-in system [:slack-env :client-id])
+                               "&client_secret=" (get-in system [:slack-env :client-secret]))
+                          {:headers {"Content-Type" "application/json; charset=utf-8"}
+                           :oauth-token access_token})
+                        :body
+                        (jsonista/read-value jsonista/keyword-keys-object-mapper))]
 
-                                (:ok res)
-                                (do
-                                  (mulog/log ::uninstalled-from-slack
-                                             :success :true
-                                             :local-time (java.time.LocalDateTime/now))
-                                  (-> "OK" response (content-type "text/plain")))
+            (cond
+              (spec/invalid? (spec/conform ::slack-specs/apps-uninstall res))
+              (do
+                (mulog/log ::uninstalled-from-slack
+                           :success :false
+                           :error "Slack API response did not conform to spec"
+                           :spec-explain (spec/explain ::slack-specs/apps-uninstall res)
+                           :local-time (java.time.LocalDateTime/now))
+                (-> {:status 500 :body "Couldn't uninstall from Slack, got invalid response"} (content-type "text-plain")))
 
-                                :else
-                                (do
-                                  (mulog/log ::uninstalled-from-slack
-                                             :success :false
-                                             :error (:error res)
-                                             :local-time (java.time.LocalDateTime/now))
-                                  (-> {:status 500 :body "Couldn't uninstall from Slack!"} (content-type "text-plain"))))))
+              (:ok res)
+              (do
+                (mulog/log ::uninstalled-from-slack
+                           :success :true
+                           :local-time (java.time.LocalDateTime/now))
+                (-> "OK" response (content-type "text/plain")))
 
-                          (catch Exception e
+              :else
+              (do
+                (mulog/log ::uninstalled-from-slack
+                           :success :false
+                           :error (:error res)
+                           :local-time (java.time.LocalDateTime/now))
+                (-> {:status 500 :body "Couldn't uninstall from Slack!"} (content-type "text-plain"))))))
+
+        (catch Exception e
                             ;; TODO: send a Slack message to the admin user informing them this failed, and they need to manually remove the app
-                            (mulog/log ::uninstalling-app
-                                       :success :false
-                                       :error (.getMessage e)
-                                       :local-time (java.time.LocalDateTime/now)))))))
+          (mulog/log ::uninstalling-app
+                     :success :false
+                     :error (.getMessage e)
+                     :local-time (java.time.LocalDateTime/now)))))))
 
 (defn lifecycle
   "
@@ -232,7 +233,7 @@
           event-type (:eventType lifecycle-payload)
           base-url (:baseUrl lifecycle-payload)
 
-          {:keys [:atlassian_tenants/tenant_id] :as atlassian_tenant}
+          {:keys [:atlassian_tenants/id] :as atlassian_tenant}
           (-> (sql/find-by-keys
                db-connection
                :atlassian_tenants
@@ -241,11 +242,11 @@
 
       (mulog/log ::lifecycle-event :event-type event-type :base-url base-url :local-time (java.time.LocalDateTime/now))
 
-      (mulog/with-context {:base-url (:baseUrl lifecycle-payload) :event-type event-type :tenant-id tenant_id}
-                          (case event-type
-                            "installed" (installed lifecycle-payload atlassian_tenant system)
-                            "enabled" (enabled lifecycle-payload atlassian_tenant system)
-                            "uninstalled" (uninstalled lifecycle-payload atlassian_tenant system))))))
+      (mulog/with-context {:base-url (:baseUrl lifecycle-payload) :event-type event-type :tenant-id id}
+        (case event-type
+          "installed" (installed lifecycle-payload atlassian_tenant system)
+          "enabled" (enabled lifecycle-payload atlassian_tenant system)
+          "uninstalled" (uninstalled lifecycle-payload atlassian_tenant system))))))
 
 (defn get-started
   "
