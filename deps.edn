@@ -6,7 +6,7 @@
   org.clojure/clojure {:mvn/version "1.11.1"}
 
   ;; System
-  party.donut/system {:mvn/version "0.0.203"}
+  party.donut/system {:mvn/version "0.0.218"}
   buddy/buddy-sign {:mvn/version "3.4.333"}
   clojure.java-time/clojure.java-time {:mvn/version "1.2.0"}
 
