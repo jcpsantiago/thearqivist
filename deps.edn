@@ -29,7 +29,7 @@
   camel-snake-kebab/camel-snake-kebab {:mvn/version "0.4.3"}
   metosin/muuntaja {:mvn/version "0.6.8"}
   metosin/reitit {:mvn/version "0.6.0"}
-  metosin/jsonista {:mvn/version "0.3.7"}
+  metosin/jsonista {:mvn/version "0.3.8"}
 
   ;; Slack
   io.github.jcpsantiago/clj-slack {:git/sha "da7432c" :git/tag "v0.8.2"}
