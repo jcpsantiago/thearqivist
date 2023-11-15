@@ -25,7 +25,7 @@
   org.postgresql/postgresql {:mvn/version "42.6.0"}
 
   ;; HTTP server
-  http-kit/http-kit {:mvn/version "2.6.0"}
+  http-kit/http-kit {:mvn/version "2.7.0"}
   camel-snake-kebab/camel-snake-kebab {:mvn/version "0.4.3"}
   metosin/muuntaja {:mvn/version "0.6.8"}
   metosin/reitit {:mvn/version "0.6.0"}
