@@ -44,7 +44,7 @@ services:
   # --- Postgres Relational Database --- #
   # https://github.com/docker-library/docs/blob/master/postgres/README.md
   postgres:
-    image: "postgres:15.2-alpine"
+    image: "postgres:15.5-alpine"
     restart: always
     ports:
       - "5432:5432"
