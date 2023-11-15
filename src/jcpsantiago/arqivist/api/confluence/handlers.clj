@@ -216,7 +216,8 @@
                 (-> {:status 500 :body "Couldn't uninstall from Slack!"} (content-type "text-plain"))))))
 
         (catch Exception e
-                            ;; TODO: send a Slack message to the admin user informing them this failed, and they need to manually remove the app
+          ;; TODO: send a Slack message to the admin user informing them this failed,
+          ;; and they need to manually remove the app
           (mulog/log ::uninstalling-app
                      :success :false
                      :error (.getMessage e)
