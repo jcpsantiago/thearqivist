@@ -13,6 +13,7 @@
    [jcpsantiago.arqivist.api.confluence.utils :as utils]
    [jcpsantiago.arqivist.api.slack.specs :as specs]
    [ring.util.response :refer [bad-request]]
+   [clj-slack.users :as slack-users]
    [jsonista.core :as json]))
 
 ;; Slack middleware ----------------------------------------------------------
@@ -177,6 +178,36 @@
                    :error (.getMessage e)
                    :local-time (java.time.LocalDateTime/now))))))
 
+(defn member?
+  [channel-id user-conversations]
+  (if (:ok user-conversations)
+    (let [member-channels (->> (:channels user-conversations)
+                               (map #(select-keys % [:id]))
+                               (map vals)
+                               (into #{}))]
+      (some member-channels channel-id))))
+
+(defn wrap-join-slack-channel
+  "
+  Ring middleware which checks if The Arqivist bot is a member of a channel,
+  then joins the channel, or asks the user to invite the bot in case it's a private channel.
+  Used when interacting with the slash command endpoint.
+
+  !! Must run _after_ the wrap-add-slack-team-attributes middleware !!
+  "
+  [handler _]
+  (fn [request]
+    (try
+      (let [channel_id (get-in request [:parameters :form :channel_id])
+            slack-connection (:slack-connection request)
+            user-conversations (slack-users/conversations slack-connection)
+            member? (conversation-member? channel_id user-conversations)])
+
+      (catch Exception e
+        (mulog/log ::join-slack-channel
+                   :success :false
+                   :error e)))))
+
 ;; Logging middleware -----------------------------------------------------
 ;; https://github.com/BrunoBonacci/mulog/blob/master/doc/ring-tracking.md
 (defn wrap-trace-events
@@ -191,12 +222,12 @@
     ;; track the request duration and outcome
     (mulog/trace
      :io.redefine.datawarp/http-request
-     {:pairs [:content-type     (get-in request [:headers "content-type"])
-              :content-encoding (get-in request [:headers "content-encoding"])
-              :middleware       id]
+      {:pairs [:content-type     (get-in request [:headers "content-type"])
+               :content-encoding (get-in request [:headers "content-encoding"])
+               :middleware       id]
       ;; capture http status code from the response
-      :capture (fn [{:keys [status]}] {:http-status status})}
-     (handler request))))
+       :capture (fn [{:keys [status]}] {:http-status status})}
+      (handler request))))
 
 ;; Atlassian middleware -----------------------------------------------------
 (defn verify-atlassian-iframe
