@@ -137,6 +137,9 @@
                 (assoc :slack-team-attributes slack-team-attributes)
                 (assoc :slack-connection slack-connection)
                 handler))
+
+          ;; TODO: handle invalid spec explicitly
+
           (nil? (:token slack-connection))
           (do
             (mulog/log ::add-slack-team-attributes

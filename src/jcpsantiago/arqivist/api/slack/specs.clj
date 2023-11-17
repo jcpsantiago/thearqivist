@@ -69,7 +69,7 @@
 (spec/def ::apps-uninstall
   (spec/or
    :good-response (spec/keys :req-un [::ok])
-   :error-response ::api-error))
+   :error-response ::error-response))
 
 ;; Slash commands are sent via POST requests with Content-type application/x-www-form-urlencoded.
 ;; See the docs in https://api.slack.com/interactivity/slash-commands#app_command_handling

@@ -42,7 +42,7 @@
  :aliases
  {;; Clojure.main execution of application
   :run/service
-  {:main-opts ["-m" "jcpsantiago.thearqivist"]}
+  {:main-opts ["-m" "jcpsantiago.arqivist.core"]}
 
   ;; Clojure.exec execution of specified function
   :run/greet
