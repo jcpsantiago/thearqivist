@@ -13,8 +13,10 @@
    [jcpsantiago.arqivist.api.confluence.utils :as utils]
    [jcpsantiago.arqivist.api.slack.specs :as specs]
    [ring.util.response :refer [bad-request]]
+   [clj-slack.conversations :as slack-convo]
    [clj-slack.users :as slack-users]
-   [jsonista.core :as json]))
+   [jsonista.core :as json]
+   [clojure.core :as c]))
 
 ;; Slack middleware ----------------------------------------------------------
 (defn wrap-keep-raw-json-string
@@ -178,14 +180,13 @@
                    :error (.getMessage e)
                    :local-time (java.time.LocalDateTime/now))))))
 
-(defn member?
+(defn conversation-member?
   [channel-id user-conversations]
-  (if (:ok user-conversations)
-    (let [member-channels (->> (:channels user-conversations)
-                               (map #(select-keys % [:id]))
-                               (map vals)
-                               (into #{}))]
-      (some member-channels channel-id))))
+  (let [member-channels (->> (:channels user-conversations)
+                             (map #(select-keys % [:id]))
+                             (map vals)
+                             (into #{}))]
+    (some member-channels channel-id)))
 
 (defn wrap-join-slack-channel
   "
@@ -200,8 +201,40 @@
     (try
       (let [channel_id (get-in request [:parameters :form :channel_id])
             slack-connection (:slack-connection request)
-            user-conversations (slack-users/conversations slack-connection)
-            member? (conversation-member? channel_id user-conversations)])
+            users-conversations-response (slack-users/conversations slack-connection)
+            users-conversations (spec/conform ::specs/users-conversations users-conversations-response)]
+
+        ;; FIXME: move to IF with an else branch to log invalid specs
+        (when (spec/valid? ::specs/users-conversations users-conversations)
+          (let [member? (conversation-member? channel_id users-conversations)]
+            (if member?
+              (handler request)
+              (let [conversations-join-response (slack-convo/join slack-connection channel_id)
+                    conversations-join (spec/conform ::specs/conversations-join conversations-join-response)]
+                (cond
+                  (spec/valid? ::specs/conversations-join conversations-join)
+                  (do
+                    (mulog/log ::join-slack-channel
+                               :success :true)
+                    (handler request))
+
+                  (= (:error conversations-join-response) "channel_not_found")
+                  ;; TODO: show nicer modal with error to user
+                  (do
+                    (mulog/log ::join-slack-channel
+                               :success :false
+                               :error "Possibly private channel")
+                    (bad-request "PRIVATE CHANNEL"))
+
+                  :else
+                  ;; TODO: show nicer modal with error to user 
+                  (do
+                    (mulog/log ::join-slack-channel
+                               :success :false
+                               :error "Data does not conform to spec"
+                               :slack-error (:error users-conversations-response)
+                               :explanation (spec/explain-data ::specs/users-conversations users-conversations-response))
+                    (bad-request "BAD"))))))))
 
       (catch Exception e
         (mulog/log ::join-slack-channel
