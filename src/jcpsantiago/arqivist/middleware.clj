@@ -12,7 +12,7 @@
    [next.jdbc.sql :as sql]
    [jcpsantiago.arqivist.api.confluence.utils :as utils]
    [jcpsantiago.arqivist.api.slack.specs :as specs]
-   [ring.util.response :refer [bad-request]]
+   [ring.util.response :refer [bad-request response]]
    [clj-slack.conversations :as slack-convo]
    [clj-slack.users :as slack-users]
    [jsonista.core :as json]
@@ -183,10 +183,52 @@
 (defn conversation-member?
   [channel-id user-conversations]
   (let [member-channels (->> (:channels user-conversations)
-                             (map #(select-keys % [:id]))
-                             (map vals)
+                             (map :id)
                              (into #{}))]
-    (some member-channels channel-id)))
+
+    (some member-channels [channel-id])))
+
+(defn try-conversations-join
+  "
+  Helper function to the wrap-join-slack-channel middleware.
+  Tries to join a Slack channel. If the channel is private, informs the user of this fact, and
+  warns about the implications.
+  "
+  [slack-connection channel-id handler request]
+  (let [conversations-join-response (slack-convo/join slack-connection channel-id)
+        conversations-join (spec/conform ::specs/conversations-join conversations-join-response)]
+    (cond
+      (spec/valid? ::specs/conversations-join conversations-join)
+      (do
+        (mulog/log ::try-conversations-join
+                   :success :true)
+        (handler request))
+
+      (some #{"method_not_supported_for_channel_type" "channel_not_found"}
+            [(:error conversations-join-response)])
+      (do
+        (mulog/log ::try-conversations-join
+                   :success :false
+                   :explanation "Possibly tried to join a private channel")
+        (response
+         (str "⚠️  It looks like you are trying to archive a *private channel*. "
+              "Archived channels do not carry over permissions, so assume the contents of the archive will be public.\n"
+              "If you are sure that is what you want, please invite me to this "
+              "channel first by mentioning me with <@the_arqivist>, "
+              "and then use the slash command again.")))
+
+      (not (spec/valid? ::specs/conversations-join conversations-join))
+      (do
+        (mulog/log ::try-conversations-join
+                   :success :false
+                   :error "conversations.join response does not conform to spec"
+                   :explanation (spec/explain-data ::specs/conversations-join conversations-join-response))
+        (response
+         ;; TODO: carve this out into a function
+         (str "Something didn't work 😣\n"
+              "I've alerted my supervisor, and a fix will be deployed ASAP so please try again later.\n"
+              "In case the error persists, please contact supervisor@arqivist.app directly and share the "
+              "error code: `" (:mulog/root-trace (mulog/local-context)) "`."))))))
 
 (defn wrap-join-slack-channel
   "
@@ -194,52 +236,40 @@
   then joins the channel, or asks the user to invite the bot in case it's a private channel.
   Used when interacting with the slash command endpoint.
 
-  !! Must run _after_ the wrap-add-slack-team-attributes middleware !!
+  !! Must run _after_ the wrap-add-slack-team-attributes middleware to access slack-connection!!
   "
   [handler _]
   (fn [request]
-    (try
-      (let [channel_id (get-in request [:parameters :form :channel_id])
-            slack-connection (:slack-connection request)
-            users-conversations-response (slack-users/conversations slack-connection)
-            users-conversations (spec/conform ::specs/users-conversations users-conversations-response)]
+    (let [channel_id (get-in request [:parameters :form :channel_id])
+          slack-connection (:slack-connection request)
+          users-conversations-response (slack-users/conversations slack-connection)
+          users-conversations (spec/conform ::specs/users-conversations users-conversations-response)
+          member? (conversation-member? channel_id users-conversations)
+          valid-spec? (spec/valid? ::specs/users-conversations users-conversations)]
 
-        ;; FIXME: move to IF with an else branch to log invalid specs
-        (when (spec/valid? ::specs/users-conversations users-conversations)
-          (let [member? (conversation-member? channel_id users-conversations)]
-            (if member?
-              (handler request)
-              (let [conversations-join-response (slack-convo/join slack-connection channel_id)
-                    conversations-join (spec/conform ::specs/conversations-join conversations-join-response)]
-                (cond
-                  (spec/valid? ::specs/conversations-join conversations-join)
-                  (do
-                    (mulog/log ::join-slack-channel
-                               :success :true)
-                    (handler request))
+      (cond
+        (and valid-spec? member?)
+        (do
+          (mulog/log ::join-slack-channel
+                     :success :true)
+          (handler request))
 
-                  (= (:error conversations-join-response) "channel_not_found")
-                  ;; TODO: show nicer modal with error to user
-                  (do
-                    (mulog/log ::join-slack-channel
-                               :success :false
-                               :error "Possibly private channel")
-                    (bad-request "PRIVATE CHANNEL"))
+        (and valid-spec? (not member?))
+        (try-conversations-join slack-connection channel_id handler request)
 
-                  :else
-                  ;; TODO: show nicer modal with error to user 
-                  (do
-                    (mulog/log ::join-slack-channel
-                               :success :false
-                               :error "Data does not conform to spec"
-                               :slack-error (:error users-conversations-response)
-                               :explanation (spec/explain-data ::specs/users-conversations users-conversations-response))
-                    (bad-request "BAD"))))))))
-
-      (catch Exception e
-        (mulog/log ::join-slack-channel
-                   :success :false
-                   :error e)))))
+        (not valid-spec?)
+        (do
+          (mulog/log ::join-slack-channel
+                     :success :false
+                     :error "Data does not conform to spec"
+                     :slack-error (:error users-conversations-response)
+                     :explanation (spec/explain-data ::specs/users-conversations users-conversations-response));
+          (response
+           ;; TODO: carve this out into a function
+           (str "Something didn't work 😣\n"
+                "I've alerted my supervisor, and a fix will be deployed ASAP so please try again later.\n"
+                "In case the error persists, please contact supervisor@arqivist.app directly and share the "
+                "error code: `" (:mulog/root-trace (mulog/local-context)) "`.")))))))
 
 ;; Logging middleware -----------------------------------------------------
 ;; https://github.com/BrunoBonacci/mulog/blob/master/doc/ring-tracking.md
