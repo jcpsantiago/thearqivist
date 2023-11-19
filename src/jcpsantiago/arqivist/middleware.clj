@@ -180,7 +180,13 @@
                    :error (.getMessage e)
                    :local-time (java.time.LocalDateTime/now))))))
 
+;; Utils and handler for "join slack channel" middleware --- ↓
+
 (defn conversation-member?
+  "
+  Util fn that checks if a channel-id is in the list of channels (aka conversations)
+  a user is in, as returned from the users.conversations Slack API method.
+  "
   [channel-id user-conversations]
   (let [member-channels (->> (:channels user-conversations)
                              (map :id)
