@@ -273,7 +273,7 @@
         (do
           (mulog/log ::join-slack-channel
                      :success :false
-                     :error "Data does not conform to spec"
+                     :message "Data does not conform to spec"
                      :slack-error (:error users-conversations-response)
                      :explanation (spec/explain-data ::specs/users-conversations users-conversations-response));
           (response (error-response-text)))))))
