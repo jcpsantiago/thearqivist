@@ -246,9 +246,9 @@
   "
   Ring middleware which checks if The Arqivist bot is a member of a channel,
   then joins the channel, or asks the user to invite the bot in case it's a private channel.
-  Used when interacting with the slash command endpoint.
 
-  !! Must run _after_ the wrap-add-slack-team-attributes middleware to access slack-connection!!
+  * Must run _after_ the wrap-add-slack-team-attributes middleware to access slack-connection
+  * Used when interacting with the slash command endpoint.
   "
   [handler _]
   (fn [request]
