@@ -34,6 +34,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 * Add `app.json` and define healthchecks for deployments with Dokku/Heroku
 * Correctly set the logging as pretty EDN for dev, and JSON for prod
 * Uninstall app from user's Slack if they uninstall from Confluence
+* [#88](https://github.com/jcpsantiago/thearqivist/issues/88) Automatically join public channels
 
 ## 0.1.0 - 2023-04-20
 

@@ -36,7 +36,8 @@
                  {:description "Slack docs about Slash Commands"
                   :url "https://api.slack.com/interactivity/slash-commands"}}
        :middleware [[wrap-verify-slack-request :verify-slack-request]
-                    [wrap-add-slack-team-attributes :add-slack-team-attributes]]
+                    [wrap-add-slack-team-attributes :add-slack-team-attributes]
+                    [middleware-arqivist/wrap-join-slack-channel :join-slack-channel]]
        :post
        {:summary "Target for Slash Command interactions"
         :description "This endpoint receives all interactions initiated by typing the `/arqive` slash command."
