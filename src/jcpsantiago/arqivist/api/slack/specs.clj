@@ -25,6 +25,10 @@
 (spec/def ::token_type #{"bot" "user"})
 (spec/def ::text string?)
 
+(spec/def ::channel
+  (spec/keys
+   :req-un [::id ::name]))
+
 ;; Error response
 (spec/def ::ok boolean?)
 (spec/def ::error string?)
@@ -69,6 +73,21 @@
 (spec/def ::apps-uninstall
   (spec/or
    :good-response (spec/keys :req-un [::ok])
+   :error-response ::error-response))
+
+;; User conversations API endpoint ------------------------------
+(spec/def ::channels
+  (spec/coll-of ::channel))
+
+(spec/def ::users-conversations
+  (spec/or
+   :good-response (spec/keys :req-un [::ok ::channels])
+   :error-response ::error-response))
+
+;; Conversations join API endpoint ------------------------------
+(spec/def ::conversations-join
+  (spec/or
+   :good-response (spec/keys :req-un [::ok ::channel])
    :error-response ::error-response))
 
 ;; Slash commands are sent via POST requests with Content-type application/x-www-form-urlencoded.
