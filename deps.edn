@@ -49,6 +49,13 @@
   {:exec-fn jcpsantiago.thearqivist/greet
    :exec-args {:name "Clojure"}}
 
+  ;; Add libraries and paths to support local development
+  :dev/env
+  {:extra-paths ["dev" "test"]
+   :extra-deps
+   {djblue/portal                {:mvn/version "0.49.0"}
+    org.clojure/tools.namespace  {:mvn/version "1.4.4"}}}
+
   ;; Add libraries and paths to support additional test tools
   :test/env
   {}
