@@ -38,12 +38,12 @@
 (defn setup-archival-handler
   [system request job]
   (try
-    (future
-      (mulog/with-context (mulog/local-context)
-        (messages/start-job system request job core-utils/persist-job!)))
+    (let [context (mulog/local-context)]
+      (future
+        (mulog/with-context context
+          (messages/start-job system request job core-utils/persist-job!)))
 
-    ;; job started confirmation modal
-    (update-modal-response ui/confirm-job-started-modal request)
+      (update-modal-response ui/confirm-job-started-modal request))
 
     (catch Exception e
       (mulog/log ::handle-setup-archival-modal
@@ -94,10 +94,10 @@
   interact with a message shortcut (a 'message_action').
   "
   [system]
-  (fn [{{{{:keys [type] :as payload} :payload} :form} :parameters :as request}]
+  (fn [{{{{:keys [type view]} :payload} :form} :parameters :as request}]
     (let [context {:type type
-                   :callback-id (get-in payload [:view :callback_id])
-                   :frequency (get-in payload [:view :state :values :archive_frequency_selector :radio_buttons-action :selected_option :value])}]
+                   :callback-id (:callback_id view)
+                   :frequency (get-in view [:state :values :archive_frequency_selector :radio_buttons-action :selected_option :value])}]
 
       (mulog/with-context
        context
@@ -135,7 +135,7 @@
           open-view (partial slack-views/open (:slack-connection request))
           trigger_id (get-in request [:parameters :form :trigger_id])
           existing-job (sql/get-by-id (:db-connection system)
-                                      :recurrent_jobs
+                                      :jobs
                                       channel_id
                                       :slack_channel_id
                                       {})]
@@ -149,19 +149,19 @@
                          :local-time (java.time.LocalDateTime/now))
               (response ""))
 
+            ;; Couldn't open the setup archive modal
+            ;; response-metadata has the reason, see slack docs
             (do
               (mulog/log ::save-to-confluence-modal
                          :success :false
                          :error (:error res)
-                         :response_metadata (:response_metadata res)
+                         :response-metadata (:response_metadata res)
                          :local-time (java.time.LocalDateTime/now))
-             ;; FIXME: use the (error-response) function here too, otherwise the user won't get
-             ;; feedback on errors
-              (bad-request ""))))
+              (response (core-utils/error-response-text)))))
 
        ;; If a job already exists in the database ↓
        ;; TODO: use cond here to account for all cases like once in db and once in setup modal
-        (if (= "once" (:recurrent_jobs/frequency existing-job))
+        (if (= "once" (:jobs/frequency existing-job))
           (open-view
            (json/write-value-as-string (ui/exists-once-confirmation-modal existing-job request))
            trigger_id)

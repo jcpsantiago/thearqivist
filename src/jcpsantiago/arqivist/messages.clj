@@ -66,20 +66,19 @@
                            :n_runs (or 1 (inc (:n_runs job)))
                            :last_slack_conversation_ts last-ts
                            :last_slack_conversation_datetime last-datetime
+                           ;; TODO: util fn to calculate due date based on frequency
                            :due_date (java.time.LocalDateTime/now)
-                           :updated_at (java.time.LocalDateTime/now)}
+                           :updated_at (java.time.LocalDateTime/now)}]
 
-                  upd (sql/update!
-                       (:db-connection system)
-                       :recurrent_jobs
-                       updates
-                       {:slack_team_id (:slack_team_id job)})]
+              (sql/update!
+               (:db-connection system)
+               :jobs
+               updates
+               {:slack_team_id (:slack_team_id job)})
 
               (mulog/log ::scribe-archive
                          :success :true
                          :job job
-                         :updated upd
-                         :updates updates
                          :team-id (:slack_team_id job)
                          :local-time (java.time.LocalDateTime/now)))
 
@@ -107,6 +106,8 @@
   "
   Collects the data needed to create a `job`, then sends it to the scribe for archival.
   Meant to run async, because the scribe can be slow.
+
+  `db-fn` is a function which either inserts or updates a row in the jobs table.
   "
   [system request job db-fn]
   (try
@@ -114,14 +115,12 @@
           atlassian_tenant_id (get-in request [:slack-team-attributes :slack_teams/atlassian_tenant_id])
           confluence-tenant-attributes (sql/get-by-id db-connection :atlassian_tenants atlassian_tenant_id)]
 
-      ;; persist or update
       (db-fn system job)
 
       (the-scribe system job true (:slack-connection request) confluence-tenant-attributes)
 
       (mulog/log ::start-job
                  :success :true
-                 :job job
                  :local-time (java.time.LocalDateTime/now)))
 
     (catch Exception e

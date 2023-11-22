@@ -87,7 +87,7 @@
   "
   [system job]
   (try
-    (sql/insert! (:db-connection system)  :recurrent_jobs job)
+    (sql/insert! (:db-connection system)  :jobs job)
     (mulog/log ::create-recurrent-job-in-db
                :success :true
                :local-time (java.time.LocalDateTime/now))
@@ -108,9 +108,9 @@
   [system job]
   (try
     (sql/update! (:db-connection system)
-                 :recurrent_jobs
+                 :jobs
                  job
-                 {:id (:recurrent_jobs/id job)})
+                 {:id (:jobs/id job)})
 
     (mulog/log ::update-job-in-db
                :success :true

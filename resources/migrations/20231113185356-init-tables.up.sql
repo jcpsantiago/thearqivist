@@ -35,7 +35,7 @@ CREATE TABLE
 
 --;;
 CREATE TABLE
-  IF NOT EXISTS recurrent_jobs (
+  IF NOT EXISTS jobs (
     id serial primary key,
     slack_team_id int NOT NULL REFERENCES slack_teams ON DELETE CASCADE,
     slack_channel_id varchar(255) NOT NULL,

@@ -92,8 +92,8 @@
   "
   [existing-job request]
   (let [{{{:keys [team_domain channel_name channel_id user_id user_name]} :form} :parameters} request
-        {:keys [:recurrent_jobs/owner_slack_user_id :recurrent_jobs/slack_channel_id
-                :recurrent_jobs/created_at :recurrent_jobs/target_url]} existing-job]
+        {:keys [:jobs/owner_slack_user_id :jobs/slack_channel_id
+                :jobs/created_at :jobs/target_url]} existing-job]
     {:type "modal"
      :callback_id "exists-once-confirmation"
      :title {:type "plain_text" :text "Previous archive found" :emoji true}
