@@ -37,11 +37,18 @@ CREATE TABLE
 CREATE TABLE
   IF NOT EXISTS recurrent_jobs (
     id serial primary key,
-    slack_team_id int REFERENCES slack_teams ON DELETE CASCADE,
-    slack_channel_id varchar(255),
-    creator_slack_user_id varchar(255),
-    frequency varchar(255),
+    slack_team_id int NOT NULL REFERENCES slack_teams ON DELETE CASCADE,
+    slack_channel_id varchar(255) NOT NULL,
+    owner_slack_user_id varchar(255) NOT NULL,
+    timezone varchar(255) NOT NULL,
+    frequency varchar(255) NOT NULL,
+    target varchar(255) NOT NULL,
+    target_url varchar(255),
+    last_slack_conversation_datetime timestamp,
     last_slack_conversation_ts varchar(255),
     due_date timestamp,
-    created_at timestamp default current_timestamp
+    n_runs int,
+    updated_at timestamp,
+    created_at timestamp default current_timestamp,
+    CHECK (frequency in ('once', 'daily', 'weekly'))
   );

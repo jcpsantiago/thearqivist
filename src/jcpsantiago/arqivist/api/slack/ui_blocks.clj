@@ -2,7 +2,9 @@
   "
   Namespace with functions to build Slack UIs.
   See https://api.slack.com/block-kit/building for the official documentation.
-  ")
+  "
+  (:require
+   [java-time.api :as java-time]))
 
 (defn help-message
   "
@@ -37,11 +39,12 @@
 
 (defn setup-archival-modal
   "
-  Modal asking the user to confirm saving a channel once.
+  Modal asking the user to setup the channel archival job.
   "
   [request]
   (let [{{{:keys [team_domain channel_name channel_id user_id user_name]} :form} :parameters} request]
     {:type "modal"
+     :callback_id "setup-archival"
      :title {:type "plain_text" :text "The Arqivist" :emoji true}
      :submit {:type "plain_text" :text "Create archive" :emoji true}
      :close {:type "plain_text" :text "Cancel" :emoji true}
@@ -79,9 +82,98 @@
       {:type "context"
        :elements
        [{:type "mrkdwn"
-         :text "For *daily* and *weekly*: the archive is created _now_, then updated at 12am with the frequency you selected."}
+         :text "For *daily* and *weekly*: the archive is created _now_, then updated at 12am UTC at the end of the selected period e.g. 12am of the next day or 12am of Saturday."}
         {:type "mrkdwn"
          :text ":sos: `/arqive help` — if you're stuck, check the docs"}]}]}))
+
+(defn exists-once-confirmation-modal
+  "
+  Modal informing the user the current channel has already been saved once
+  "
+  [existing-job request]
+  (let [{{{:keys [team_domain channel_name channel_id user_id user_name]} :form} :parameters} request
+        {:keys [:recurrent_jobs/owner_slack_user_id :recurrent_jobs/slack_channel_id
+                :recurrent_jobs/created_at :recurrent_jobs/target_url]} existing-job]
+    {:type "modal"
+     :callback_id "exists-once-confirmation"
+     :title {:type "plain_text" :text "Previous archive found" :emoji true}
+     :submit {:type "plain_text" :text "Create archive" :emoji true}
+     :close {:type "plain_text" :text "Cancel" :emoji true}
+     :private_metadata (pr-str {:channel_name channel_name
+                                :channel_id channel_id
+                                :user_name user_name
+                                :user_id user_id
+                                :domain team_domain})
+     :blocks
+     [{:type "section"
+       :text
+       {:type "mrkdwn"
+        :text (str "<@" owner_slack_user_id "> archived " "<#" slack_channel_id ">"
+                   " `once` in " created_at ". You can find it <" target_url "|here>.\n\n"
+                   "If you would you like to setup recurrent archival instead of a one time job, "
+                   "select another frequency, otherwise please select `once` again. I'll "
+                   "create a new archive with messages since " created_at " "
+                   "without overwriting the previous archive.")}}
+      {:type "divider"}
+      {:type "input"
+       :element
+       {:type "radio_buttons"
+        :options
+        [{:text {:type "plain_text" :text "Once" :emoji true}
+          :value "once"}
+         {:text {:type "plain_text" :text "Daily" :emoji true}
+          :value "daily"}
+         {:text {:type "plain_text" :text "Weekly" :emoji true}
+          :value "weekly"}]
+        :action_id "radio_buttons-action"}
+       :block_id "archive_frequency_selector"
+       :label
+       {:type "plain_text"
+        :text "How often do you want to archive it?"
+        :emoji true}}]}))
+
+(defn exists-recurrent-information-modal
+  "
+  Modal informing the user the current channel already has a recurrent job setup.
+  "
+  [request existing-job]
+  (let [{{{:keys [team_domain channel_name channel_id user_id user_name]} :form} :parameters} request
+        {:keys [owner_slack_user_id created_at target_url]} existing-job]
+    {:type "modal"
+     :callback_id "exists-recurrent-confirmation"
+     :title {:type "plain_text" :text "The Arqivist" :emoji true}
+     :submit {:type "plain_text" :text "Create archive" :emoji true}
+     :close {:type "plain_text" :text "Cancel" :emoji true}
+     :private_metadata (pr-str {:channel_name channel_name
+                                :channel_id channel_id
+                                :user_name user_name
+                                :user_id user_id
+                                :domain team_domain})
+     :blocks
+     [{:type "section"
+       :text
+       {:type "mrkdwn"
+        :text (str "<@" owner_slack_user_id "> already created a recurrent job " "*#" channel_name "*"
+                   " once in " created_at ". You can find it <here|" target_url ">\n"
+                   "Would you like to setup recurrent archival instead of a one time job? "
+                   "If so, select another frequency, otherwise please select `once` again.")}}
+      {:type "divider"}
+      {:type "input"
+       :element
+       {:type "radio_buttons"
+        :options
+        [{:text {:type "plain_text" :text "Once" :emoji true}
+          :value "once"}
+         {:text {:type "plain_text" :text "Daily" :emoji true}
+          :value "daily"}
+         {:text {:type "plain_text" :text "Weekly" :emoji true}
+          :value "weekly"}]
+        :action_id "radio_buttons-action"}
+       :block_id "archive_frequency_selector"
+       :label
+       {:type "plain_text"
+        :text "How often do you want to archive it?"
+        :emoji true}}]}))
 
 (defn confirm-job-started-modal
   [request]

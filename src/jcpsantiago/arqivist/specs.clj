@@ -5,25 +5,25 @@
   (:require
    [clojure.spec.alpha :as spec]))
 
-(spec/def ::channel-id string?)
-(spec/def ::channel-name string?)
-(spec/def ::user-id string?)
-(spec/def ::user-name string?)
-(spec/def ::domain string?)
-(spec/def ::created-at inst?)
-(spec/def ::frequency #{"once" "daily" "weekly"})
-(spec/def ::target #{:confluence})
-(spec/def ::action #{"create" "update"})
-(spec/def ::next-update inst?)
-(spec/def ::thread-ts string?)
+(spec/def ::id int?)
+(spec/def ::slack_team_id int?)
+(spec/def ::slack_channel_id string?)
+(spec/def ::owner_slack_user_id string?)
 (spec/def ::timezone string?)
+(spec/def ::frequency #{"once" "daily" "weekly"})
+(spec/def ::target #{"confluence"})
+(spec/def ::target_url string?)
+(spec/def ::last_slack_conversation_datetime inst?)
+(spec/def ::last_slack_conversation_ts string?)
+(spec/def ::due_date inst?)
+(spec/def ::n_runs int?)
+(spec/def ::updated_at inst?)
+(spec/def ::created_at inst?)
 
 (spec/def ::job
   (spec/keys
-   :req-un [::channel-id ::channel-name ::domain
-            ::user-id ::user-name ::timezone
-            ::created-at ::frequency ::target ::action]
-   ;; FIXME: next-update shouldn't be opt, but it's not implemented yet
-   :opt-un [::thread-ts ::next-update]))
-
+   :req-un [::slack_team_id ::slack_channel_id ::owner_slack_user_id ::timezone
+            ::frequency ::target]
+   :opt-un [::id ::last_slack_conversation_ts ::due_date ::n_runs ::updated_at ::created_at
+            ::target_url ::last_slack_conversation_datetime]))
 

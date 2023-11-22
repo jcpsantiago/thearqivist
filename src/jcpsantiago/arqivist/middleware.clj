@@ -10,6 +10,7 @@
    [clojure.string :as string]
    [com.brunobonacci.mulog :as mulog]
    [next.jdbc.sql :as sql]
+   [jcpsantiago.arqivist.utils :as core-utils]
    [jcpsantiago.arqivist.api.confluence.utils :as utils]
    [jcpsantiago.arqivist.api.slack.specs :as specs]
    [ring.util.response :refer [bad-request response]]
@@ -128,50 +129,58 @@
             slack-connection {:api-url "https://slack.com/api"
                               :token (:slack_teams/access_token slack-team-attributes)}]
 
-        (cond
+        ;; TODO: add more non PII details to context
+        (mulog/with-context {:slack-team-id team_id}
+          (cond
 
-          (and (spec/valid? ::specs/team-attributes slack-team-attributes)
-               (seq (:token slack-connection)))
-          (do
-            (mulog/log ::add-slack-team-attributes
-                       :success :true
-                       :local-time (java.time.LocalDateTime/now))
-            (-> request
-                (assoc :slack-team-attributes slack-team-attributes)
-                (assoc :slack-connection slack-connection)
-                handler))
+            (and (spec/valid? ::specs/team-attributes slack-team-attributes)
+                 (seq (:token slack-connection)))
+            (do
+              (mulog/log ::add-slack-team-attributes
+                         :success :true
+                         :local-time (java.time.LocalDateTime/now))
+              (-> request
+                  (assoc :slack-team-attributes slack-team-attributes)
+                  (assoc :slack-connection slack-connection)
+                  handler))
 
-          ;; TODO: handle invalid spec explicitly
+            (spec/invalid? slack-team-attributes)
+            (do
+              (mulog/log ::add-slack-team-attributes
+                         :success :false
+                         :message "Slack team attributes did not conform to spec"
+                         ;; FIXME: The explanation will contain the slack access key!
+                         ;; we have to obfuscate that before logging
+                         :explanation (spec/explain-data ::specs/team-attributes slack-team-attributes)
+                         :local-time (java.time.LocalDateTime/now))
+              (response (core-utils/error-response-text)))
 
-          (nil? (:token slack-connection))
-          (do
-            (mulog/log ::add-slack-team-attributes
-                       :success :false
-                       :error "Missing Slack connection token"
-                       :team-id team_id
-                       :local-time (java.time.LocalDateTime/now))
-            (bad-request ""))
+            (nil? (:token slack-connection))
+            (do
+              (mulog/log ::add-slack-team-attributes
+                         :success :false
+                         :message "Missing Slack connection token"
+                         :local-time (java.time.LocalDateTime/now))
+              (response (core-utils/error-response-text)))
 
-          ;; NOTE: edge-case, only became relevant during development
-          ;; it shouldn't be possible to have access to the app
-          ;; without having installed it first
-          (nil? slack-team-row)
-          (do
-            (mulog/log ::add-slack-team-attributes
-                       :success :false
-                       :error "Missing Slack credentials in the db"
-                       ;; TODO: add this to the logging context?
-                       :team-id team_id
-                       :local-time (java.time.LocalDateTime/now))
-            (bad-request ""))
+            ;; NOTE: edge-case, only became relevant during development
+            ;; it shouldn't be possible to have access to the app
+            ;; without having installed it first
+            (nil? slack-team-row)
+            (do
+              (mulog/log ::add-slack-team-attributes
+                         :success :false
+                         :error "Missing Slack credentials in the db"
+                         :local-time (java.time.LocalDateTime/now))
+              (response (core-utils/error-response-text)))
 
-          :else
-          (do
-            (mulog/log ::add-slack-team-attributes
-                       :success :false
-                       :error "Spec does not conform"
-                       :explanation (spec/explain ::specs/team-attributes slack-team-row))
-            (bad-request ""))))
+            :else
+            (do
+              (mulog/log ::add-slack-team-attributes
+                         :success :false
+                         :error "Spec does not conform"
+                         :explanation (spec/explain ::specs/team-attributes slack-team-row))
+              (response (core-utils/error-response-text))))))
 
       (catch Exception e
         (mulog/log ::add-slack-team-attributes
@@ -194,17 +203,6 @@
 
     (some member-channels [channel-id])))
 
-(defn error-response-text
-  "
-  Returns a string with text for informing the user a generic error has happened.
-  Contains root-trace id from mulog.
-  "
-  []
-  (str "Something didn't work 😣\n"
-       "I've alerted my supervisor, and a fix will be deployed ASAP so please try again later.\n"
-       "In case the error persists, please contact supervisor@arqivist.app directly and share the "
-       "error code: `" (:mulog/root-trace (mulog/local-context)) "`."))
-
 (defn try-conversations-join
   "
   Helper function to the wrap-join-slack-channel middleware.
@@ -213,12 +211,14 @@
   "
   [slack-connection channel-id handler request]
   (let [conversations-join-response (slack-convo/join slack-connection channel-id)
-        conversations-join (spec/conform ::specs/conversations-join conversations-join-response)]
+        conversations-join (spec/conform ::specs/conversations-join conversations-join-response)
+        good-response? (= (first conversations-join) :good-response)]
     (cond
-      (spec/valid? ::specs/conversations-join conversations-join)
+      (and (spec/valid? ::specs/conversations-join conversations-join-response) good-response?)
       (do
         (mulog/log ::try-conversations-join
-                   :success :true)
+                   :success :true
+                   :local-time (java.time.LocalDateTime/now))
         (handler request))
 
       (some #{"method_not_supported_for_channel_type" "channel_not_found"}
@@ -226,7 +226,8 @@
       (do
         (mulog/log ::try-conversations-join
                    :success :false
-                   :message "Possibly tried to join a private channel")
+                   :message "Possibly tried to join a private channel"
+                   :local-time (java.time.LocalDateTime/now))
         (response
          (str "⚠️  It looks like you are trying to archive a *private channel*. "
               "Archived channels do not carry over permissions, so assume the contents of the archive will be public.\n"
@@ -234,13 +235,26 @@
               "channel first by mentioning me with <@the_arqivist>, "
               "and then use the slash command again.")))
 
-      (not (spec/valid? ::specs/conversations-join conversations-join))
+      ;; NOTE: the cond above is also (not good-response?), but has specific error types
+      ;; which we handle differently
+      (not good-response?)
+      (do
+        (mulog/log ::try-conversations-join
+                   :success :false
+                   :message "Error calling the conversations.join Slack API method"
+                   :slack-error (:error conversations-join-response)
+                   :explanation (spec/explain-data ::specs/conversations-join conversations-join-response)
+                   :local-time (java.time.LocalDateTime/now))
+        (response (core-utils/error-response-text)))
+
+      (not (spec/valid? ::specs/conversations-join conversations-join-response))
       (do
         (mulog/log ::try-conversations-join
                    :success :false
                    :message "conversations.join response did not conform to spec"
-                   :explanation (spec/explain-data ::specs/conversations-join conversations-join-response))
-        (response (error-response-text))))))
+                   :explanation (spec/explain-data ::specs/conversations-join conversations-join-response)
+                   :local-time (java.time.LocalDateTime/now))
+        (response (core-utils/error-response-text))))))
 
 (defn wrap-join-slack-channel
   "
@@ -256,27 +270,38 @@
           slack-connection (:slack-connection request)
           users-conversations-response (slack-users/conversations slack-connection)
           users-conversations (spec/conform ::specs/users-conversations users-conversations-response)
-          member? (conversation-member? channel_id users-conversations)
-          valid-spec? (spec/valid? ::specs/users-conversations users-conversations)]
+          member? (conversation-member? channel_id users-conversations-response)
+          valid-spec? (spec/valid? ::specs/users-conversations users-conversations-response)
+          good-response? (= (first users-conversations) :good-response)]
 
       (cond
-        (and valid-spec? member?)
+        (and valid-spec? good-response? member?)
         (do
           (mulog/log ::join-slack-channel
-                     :success :true)
+                     :success :true
+                     :local-time (java.time.LocalDateTime/now))
           (handler request))
 
-        (and valid-spec? (not member?))
+        (and valid-spec? good-response? (not member?))
         (try-conversations-join slack-connection channel_id handler request)
+
+        (not good-response?)
+        (do
+          (mulog/log ::join-slack-channel
+                     :success :false
+                     :message "Error calling the users.conversations Slack API method"
+                     :slack-error (:error users-conversations-response)
+                     :local-time (java.time.LocalDateTime/now))
+          (response (core-utils/error-response-text)))
 
         (not valid-spec?)
         (do
           (mulog/log ::join-slack-channel
                      :success :false
-                     :message "Data does not conform to spec"
-                     :slack-error (:error users-conversations-response)
-                     :explanation (spec/explain-data ::specs/users-conversations users-conversations-response));
-          (response (error-response-text)))))))
+                     :message "Response from the users.conversations Slack API method does not conform to spec"
+                     :explanation (spec/explain-data ::specs/users-conversations users-conversations-response);
+                     :local-time (java.time.LocalDateTime/now))
+          (response (core-utils/error-response-text)))))))
 
 ;; Logging middleware -----------------------------------------------------
 ;; https://github.com/BrunoBonacci/mulog/blob/master/doc/ring-tracking.md
@@ -292,12 +317,12 @@
     ;; track the request duration and outcome
     (mulog/trace
      :io.redefine.datawarp/http-request
-     {:pairs [:content-type     (get-in request [:headers "content-type"])
-              :content-encoding (get-in request [:headers "content-encoding"])
-              :middleware       id]
+      {:pairs [:content-type     (get-in request [:headers "content-type"])
+               :content-encoding (get-in request [:headers "content-encoding"])
+               :middleware       id]
       ;; capture http status code from the response
-      :capture (fn [{:keys [status]}] {:http-status status})}
-     (handler request))))
+       :capture (fn [{:keys [status]}] {:http-status status})}
+      (handler request))))
 
 ;; Atlassian middleware -----------------------------------------------------
 (defn verify-atlassian-iframe

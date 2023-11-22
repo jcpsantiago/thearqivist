@@ -3,18 +3,20 @@
   (:require
    [clj-slack.oauth :as slack-oauth]
    [clj-slack.views :as slack-views]
-   [clj-slack.users :as slack-users]
    [clojure.spec.alpha :as spec]
    [clojure.string :refer [trim]]
    [com.brunobonacci.mulog :as mulog]
-   [jcpsantiago.arqivist.messages :as messages]
-   [jcpsantiago.arqivist.specs :as core-specs]
    [jcpsantiago.arqivist.api.slack.ui-blocks :as ui]
    [jcpsantiago.arqivist.api.slack.pages :as pages]
    [jcpsantiago.arqivist.api.slack.specs :as specs]
    [jcpsantiago.arqivist.api.slack.utils :as utils]
+   [jcpsantiago.arqivist.messages :as messages]
+   [jcpsantiago.arqivist.utils :as core-utils]
    [jsonista.core :as json]
    [next.jdbc.sql :as sql]
+   ;; needed because PostgreSQL can't translate java datetime into SQL timestamp
+   ;;https://cljdoc.org/d/com.github.seancorfield/next.jdbc/1.3.894/api/next.jdbc.date-time
+   [next.jdbc.date-time]
    [ring.util.response :refer [bad-request response content-type]]))
 
 ;;
@@ -22,56 +24,56 @@
 ;; Handlers for Slack interactivity
 ;;
 
-(defn request->job
+(defn update-modal-response
   "
-  Creates a `job` from a ring request sent via the /interactivity endpoint.
+  Creates a ring response to update a modal based on a ui modal fn (see j.a.a.s.ui-blocks).
   "
-  [action request]
-  (let [slack-connection (:slack-connection request)
-        registering_user (get-in request [:slack-team-attributes :slack_teams/registering_user])
-        {:keys [tz real_name]} (-> (slack-users/info slack-connection registering_user) :user)
-        view (get-in request [:parameters :form :payload :view])
-        {:keys [channel_id channel_name user_id domain]} (-> view :private_metadata read-string)
-        frequency (get-in view [:state :values :archive_frequency_selector
-                                :radio_buttons-action :selected_option :value])
-        job-map {:target :confluence :action action :frequency frequency :channel-id channel_id
-                 :channel-name (str "#" channel_name) :user-id user_id :user-name real_name
-                 :timezone tz :created-at (java.time.Instant/now) :domain domain}
-        job (spec/conform ::core-specs/job job-map)]
+  [ui-modal-fn request]
+  (-> {:response_action "update"
+       :view (ui-modal-fn request)}
+      json/write-value-as-string
+      response
+      (content-type "application/json")))
 
-    (if (spec/invalid? job)
-      ;; FIXME: throw here? we have to do something :D
-      (mulog/log ::request->job
+(defn setup-archival-handler
+  [system request job]
+  (try
+    (future
+      (mulog/with-context (mulog/local-context)
+        (messages/start-job system request job core-utils/persist-job!)))
+
+    ;; job started confirmation modal
+    (update-modal-response ui/confirm-job-started-modal request)
+
+    (catch Exception e
+      (mulog/log ::handle-setup-archival-modal
                  :success :false
-                 :job job
-                 :job-map job-map
-                 :view view
-                 :request request
-                 :explanation (spec/explain-data ::core-specs/job job-map))
-      job)))
+                 :error e
+                 :error-message (ex-message e)
+                 :local-time (java.time.LocalDateTime/now)))))
+      ;; TODO: add ephemeral error message
 
-(defn start-job
-  "
-  Collects the data needed to create a `job`, then sends it to the scribe for archival.
-  Meant to run async, because the scribe can be slow.
-  "
-  [action system request]
-  (mulog/log ::start-job-1 :request request :system system :action action)
-  (let [atlassian_tenant_id (get-in request [:slack-team-attributes :slack_teams/atlassian_tenant_id])
-        confluence-tenant-attributes (sql/get-by-id
-                                      (:db-connection system)
-                                      :atlassian_tenants
-                                      atlassian_tenant_id)
-        job (request->job action request)]
-    (mulog/log ::start-job
-               :source :user-interaction
+(defn exists-once-confirmation-handler
+  [system request job]
+  (try
+    (mulog/log ::handling-existing-job-confirmation
                :job job
-               :confluence-tenant confluence-tenant-attributes
+               :request request
                :local-time (java.time.LocalDateTime/now))
-    (messages/the-scribe
-     job
-     (:slack-connection request)
-     confluence-tenant-attributes)))
+    (future
+      (mulog/with-context (mulog/local-context)
+        (messages/start-job system request job core-utils/update-job!)))
+
+    ;; job started confirmation modal
+    (update-modal-response ui/confirm-job-started-modal request)
+
+    (catch Exception e
+      (mulog/log ::handle-setup-archival-modal
+                 :success :false
+                 :error e
+                 :error-message (ex-message e)
+                 :local-time (java.time.LocalDateTime/now)))))
+      ;; TODO: add ephemeral error message
 
 (defn view-submission
   "
@@ -79,20 +81,11 @@
   Also updates the view with feedback for the user.
   "
   [system request]
-  (mulog/log ::view-submitted
-             :local-time (java.time.LocalDateTime/now))
-  (let [context (mulog/local-context)]
-    ;; start archival job in a different thread, because it might take time
-    (future
-      (mulog/with-context
-       context
-       (start-job "create" system request)))
-    ;; immediate response with an updated modal giving feedback to user
-    (-> {:response_action "update"
-         :view (ui/confirm-job-started-modal request)}
-        json/write-value-as-string
-        response
-        (content-type "application/json"))))
+  (let [callback-id (get-in request [:parameters :form :payload :view :callback_id])
+        job (core-utils/request->job request)]
+    (case callback-id
+      "setup-archival" (setup-archival-handler system request job)
+      "exists-once-confirmation" (exists-once-confirmation-handler system request job))))
 
 (defn interaction-handler
   "
@@ -101,20 +94,19 @@
   interact with a message shortcut (a 'message_action').
   "
   [system]
-  (fn [{{{{:keys [type team user] :as payload} :payload} :form} :parameters :as request}]
+  (fn [{{{{:keys [type] :as payload} :payload} :form} :parameters :as request}]
     (let [context {:type type
-                   :team (:id team)
-                   :user (:id user)
+                   :callback-id (get-in payload [:view :callback_id])
                    :frequency (get-in payload [:view :state :values :archive_frequency_selector :radio_buttons-action :selected_option :value])}]
 
       (mulog/with-context
        context
-       (mulog/log ::interaction-payload
-                  :local-time (java.time.LocalDateTime/now))
-       (case type
-         "view_submission" (view-submission system request)
-         "message_action" "TODO"
-         (bad-request "Unknown type"))))))
+        (mulog/log ::interaction-payload
+                   :local-time (java.time.LocalDateTime/now))
+        (case type
+          "view_submission" (view-submission system request)
+          "message_action" "TODO"
+          (bad-request "Unknown type"))))))
 
 ;;
 ;; ------------------------------------------------------
@@ -137,26 +129,52 @@
   Block-kit representation of the 'Save to channel to Confluence' modal.
   This modal is shown to the user after usage of the `/arqive once|daily|weekly` slash command.
   "
-  [request]
-  (let [res (slack-views/open
-             (:slack-connection request)
-             (json/write-value-as-string (ui/setup-archival-modal request))
-             (get-in request [:parameters :form :trigger_id]))]
+  [system request]
+  (try
+    (let [channel_id (get-in request [:parameters :form :channel_id])
+          open-view (partial slack-views/open (:slack-connection request))
+          trigger_id (get-in request [:parameters :form :trigger_id])
+          existing-job (sql/get-by-id (:db-connection system)
+                                      :recurrent_jobs
+                                      channel_id
+                                      :slack_channel_id
+                                      {})]
 
-    (if (:ok res)
-      (do
-        (mulog/log ::save-to-confluence-modal
-                   :success :true
-                   :local-time (java.time.LocalDateTime/now))
-        (response ""))
+      (if (empty? existing-job)
+        (let [res (open-view (json/write-value-as-string (ui/setup-archival-modal request)) trigger_id)]
+          (if (:ok res)
+            (do
+              (mulog/log ::save-to-confluence-modal
+                         :success :true
+                         :local-time (java.time.LocalDateTime/now))
+              (response ""))
 
-      (do
-        (mulog/log ::save-to-confluence-modal
-                   :success :false
-                   :error (:error res)
-                   :response_metadata (:response_metadata res)
-                   :local-time (java.time.LocalDateTime/now))
-        (bad-request "")))))
+            (do
+              (mulog/log ::save-to-confluence-modal
+                         :success :false
+                         :error (:error res)
+                         :response_metadata (:response_metadata res)
+                         :local-time (java.time.LocalDateTime/now))
+             ;; FIXME: use the (error-response) function here too, otherwise the user won't get
+             ;; feedback on errors
+              (bad-request ""))))
+
+       ;; If a job already exists in the database ↓
+       ;; TODO: use cond here to account for all cases like once in db and once in setup modal
+        (if (= "once" (:recurrent_jobs/frequency existing-job))
+          (open-view
+           (json/write-value-as-string (ui/exists-once-confirmation-modal existing-job request))
+           trigger_id)
+
+          (open-view
+           (json/write-value-as-string (ui/exists-recurrent-information-modal existing-job request))
+           trigger_id))))
+
+    (catch Exception e
+      (mulog/log ::save-to-confluence-modal
+                 :success :false
+                 :error e
+                 :request request))))
 
 (defn slash-command
   "
@@ -166,14 +184,14 @@
   Users will type `/arqive [options]` in Slack.
   See j.a.a.s.specs ns for the request spec. 
   "
-  [_]
+  [system]
   (fn [{{{:keys [text]} :form} :parameters :as request}]
     (mulog/log ::handling-slack-slash-command
                :text text
                :local-time (java.time.LocalDateTime/now))
     (let [trimmed-text (trim text)]
       (case trimmed-text
-        "" (setup-archival-modal request)
+        "" (setup-archival-modal system request)
         "help" (help-message)
         ;; TODO: add jobs handler
         ;; "jobs" (list-jobs)

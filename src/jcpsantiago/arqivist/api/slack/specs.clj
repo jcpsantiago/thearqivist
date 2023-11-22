@@ -180,7 +180,6 @@
 ;; Internal representations ------------------------------------------------
 ;; Slack team as stored in the production database
 (spec/def :slack_teams/id pos-int?)
-(spec/def :slack_teams/uuid uuid?)
 (spec/def :slack_teams/app_id string?)
 (spec/def :slack_teams/external_team_id string?)
 (spec/def :slack_teams/team_name string?)
@@ -193,7 +192,7 @@
 
 (spec/def ::team-attributes
   (spec/keys
-   :req [:slack_teams/id :slack_teams/uuid :slack_teams/app_id
+   :req [:slack_teams/id :slack_teams/app_id
          :slack_teams/external_team_id :slack_teams/team_name
          :slack_teams/registering_user :slack_teams/scopes :slack_teams/access_token
          :slack_teams/bot_user_id :slack_teams/created_at :slack_teams/atlassian_tenant_id]))
