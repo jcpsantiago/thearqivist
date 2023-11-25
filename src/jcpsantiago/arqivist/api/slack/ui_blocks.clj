@@ -86,34 +86,73 @@
         {:type "mrkdwn"
          :text ":sos: `/arqive help` — if you're stuck, check the docs"}]}]}))
 
+(defn two-column-section
+  "
+ Takes a key-value vector ['key' 'value'] of strings,
+ and returns a Slack block-kit structure for a section with two-columns.
+ "
+  [key-val-vector]
+  (let [columns (reduce
+                 (fn [prev [k v]]
+                   (reduce conj prev
+                           [{:type "mrkdwn"
+                             :text k}
+                            {:type "mrkdwn"
+                             :text v}]))
+                 [] key-val-vector)]
+    {:type "section"
+     :fields columns}))
+
 (defn exists-once-confirmation-modal
   "
   Modal informing the user the current channel has already been saved once
   "
   [existing-job request]
   (let [{{{:keys [team_domain channel_name channel_id user_id user_name]} :form} :parameters} request
-        {:keys [:jobs/owner_slack_user_id :jobs/slack_channel_id
-                :jobs/created_at :jobs/target_url]} existing-job]
+        {:keys [:jobs/owner_slack_user_id :jobs/slack_channel_id :jobs/n_runs
+                :jobs/created_at :jobs/target_url :jobs/last_slack_conversation_datetime]} existing-job
+        created_at_ts (quot (java-time/to-millis-from-epoch created_at) 1000)
+        last-slack-conversation-ts (quot (java-time/to-millis-from-epoch last_slack_conversation_datetime) 1000)]
     {:type "modal"
      :callback_id "exists-once-confirmation"
-     :title {:type "plain_text" :text "Previous archive found" :emoji true}
+     :title {:type "plain_text" :text "The Arqivist" :emoji true}
      :submit {:type "plain_text" :text "Create archive" :emoji true}
      :close {:type "plain_text" :text "Cancel" :emoji true}
      :private_metadata (pr-str {:channel_name channel_name
                                 :channel_id channel_id
                                 :user_name user_name
                                 :user_id user_id
-                                :domain team_domain})
+                                :domain team_domain
+                                :existing-job existing-job})
      :blocks
-     [{:type "section"
+     [{:type "header"
+       :text {:type "plain_text"
+              :text "Previous archive found"
+              :emoji true}}
+
+      {:type "section"
        :text
        {:type "mrkdwn"
-        :text (str "<@" owner_slack_user_id "> archived " "<#" slack_channel_id ">"
-                   " `once` in " created_at ". You can find it <" target_url "|here>.\n\n"
-                   "If you would you like to setup recurrent archival instead of a one time job, "
-                   "select another frequency, otherwise please select `once` again. I'll "
-                   "create a new archive with messages since " created_at " "
-                   "without overwriting the previous archive.")}}
+        :text (str "<#" slack_channel_id "> is already archived, "
+                   "you can find it <" target_url "|here>.\n")}}
+
+      (two-column-section
+       [["*Owner*: " (str "<@" owner_slack_user_id ">")]
+        ["*Created at*: " (str "<!date^" created_at_ts "^{date_short}|" created_at ">")]
+        ["*Frequency*:" "`once`"]
+        ["*Archived until*:" (str "<!date^" last-slack-conversation-ts "^{date_num} {time}|" last_slack_conversation_datetime ">")]
+        ["*Times executed*:" (str n_runs)]])
+
+      {:type "section"
+       :text
+       {:type "mrkdwn"
+        :text (str
+               "If you would you like to setup a *recurrent archival* instead of a one time manual job, "
+               "select another frequency, otherwise please select `once` again. I'll "
+               "create a new archive with messages since "
+               (str "<!date^" last-slack-conversation-ts "^{date_num} {time}|" last_slack_conversation_datetime "> ")
+               "without overwriting the previous archive.")}}
+
       {:type "divider"}
       {:type "input"
        :element
@@ -138,10 +177,11 @@
   "
   [request existing-job]
   (let [{{{:keys [team_domain channel_name channel_id user_id user_name]} :form} :parameters} request
-        {:keys [owner_slack_user_id created_at target_url]} existing-job]
+        {:keys [:jobs/owner_slack_user_id :jobs/slack_channel_id
+                :jobs/created_at :jobs/target_url]} existing-job]
     {:type "modal"
-     :callback_id "exists-recurrent-confirmation"
-     :title {:type "plain_text" :text "The Arqivist" :emoji true}
+     :callback_id "exists-once-confirmation"
+     :title {:type "plain_text" :text "Previous archive found" :emoji true}
      :submit {:type "plain_text" :text "Create archive" :emoji true}
      :close {:type "plain_text" :text "Cancel" :emoji true}
      :private_metadata (pr-str {:channel_name channel_name
@@ -153,7 +193,7 @@
      [{:type "section"
        :text
        {:type "mrkdwn"
-        :text (str "<@" owner_slack_user_id "> already created a recurrent job " "*#" channel_name "*"
+        :text (str "<@" owner_slack_user_id "> already created a recurrent job " "<#" slack_channel_id ">"
                    " once in " created_at ". You can find it <here|" target_url ">\n"
                    "Would you like to setup recurrent archival instead of a one time job? "
                    "If so, select another frequency, otherwise please select `once` again.")}}

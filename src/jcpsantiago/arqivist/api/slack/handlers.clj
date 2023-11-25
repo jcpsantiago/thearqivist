@@ -56,16 +56,20 @@
 (defn exists-once-confirmation-handler
   [system request job]
   (try
-    (mulog/log ::handling-existing-job-confirmation
-               :job job
-               :request request
-               :local-time (java.time.LocalDateTime/now))
-    (future
-      (mulog/with-context (mulog/local-context)
-        (messages/start-job system request job core-utils/update-job!)))
+    (let [{:keys [channel_id existing-job]} (get-in request [:parameters :form :payload :view :private_metadata :channel_id])
+          ;; FIXME: do we need this????
+          updated-job (-> existing-job
+                          (assoc :frequency (:frequency job)))]
+      (mulog/log ::handling-existing-job-confirmation
+                 :job existing-job
+                 :request request
+                 :local-time (java.time.LocalDateTime/now))
+      (future
+        (mulog/with-context (mulog/local-context)
+          (messages/start-job system request updated-job core-utils/update-job!)))
 
-    ;; job started confirmation modal
-    (update-modal-response ui/confirm-job-started-modal request)
+      ;; job started confirmation modal
+      (update-modal-response ui/confirm-job-started-modal request))
 
     (catch Exception e
       (mulog/log ::handle-setup-archival-modal
@@ -83,8 +87,11 @@
   [system request]
   (let [callback-id (get-in request [:parameters :form :payload :view :callback_id])
         job (core-utils/request->job request)]
+
     (case callback-id
       "setup-archival" (setup-archival-handler system request job)
+      ;; TODO: also needs the new job, update existing job inside with the new information
+      ;; otherwise we're overwriting with the same information over and over, or losing new info
       "exists-once-confirmation" (exists-once-confirmation-handler system request job))))
 
 (defn interaction-handler
@@ -162,13 +169,17 @@
        ;; If a job already exists in the database ↓
        ;; TODO: use cond here to account for all cases like once in db and once in setup modal
         (if (= "once" (:jobs/frequency existing-job))
-          (open-view
-           (json/write-value-as-string (ui/exists-once-confirmation-modal existing-job request))
-           trigger_id)
+          (do
+            (mulog/log ::open-exists-once-confirmation-modal)
+            (open-view
+             (json/write-value-as-string (ui/exists-once-confirmation-modal existing-job request))
+             trigger_id))
 
-          (open-view
-           (json/write-value-as-string (ui/exists-recurrent-information-modal existing-job request))
-           trigger_id))))
+          (do
+            (mulog/log ::open-exists-recurrent-confirmation-modal)
+            (open-view
+             (json/write-value-as-string (ui/exists-recurrent-information-modal existing-job request))
+             trigger_id)))))
 
     (catch Exception e
       (mulog/log ::save-to-confluence-modal

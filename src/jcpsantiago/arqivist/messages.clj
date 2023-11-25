@@ -8,6 +8,7 @@
    [com.brunobonacci.mulog :as mulog]
    [clj-slack.chat :as slack-chat]
    [clj-slack.conversations :as slack-convo]
+   [java-time.api :as java-time]
    [jcpsantiago.arqivist.parsers :as parsers]
    [jcpsantiago.arqivist.utils :as core-utils]
    [jcpsantiago.arqivist.api.slack.utils :as slack-utils]
@@ -38,6 +39,19 @@
          (confluence-pages/archival-page job)
          (confluence-pages/create-content! job confluence-credentials))))
 
+(defn due-date
+  "
+  Takes `frequency` as a string, and returns `java-time/local-date-time`
+  plus one unit of the provided frequency e.g. one week.
+
+  If frequency is `once` returns nil.
+  "
+  [frequency]
+  (case frequency
+    "once" nil
+    "daily"  (java-time/+ (java-time/local-date-time) (java-time/days 1))
+    "weekly" (java-time/+ (java-time/local-date-time) (java-time/weeks 1))))
+
 (defn the-scribe
   "
   The scribe is the main function for handling archival jobs.
@@ -56,19 +70,20 @@
                                   (archive! slack-connection target-credentials messages))]
         (if (contains? archival-response :archive-url)
           (do
-            (let [last-ts (->> messages (sort-by :ts) last :ts)
+            (let [frequency (:frequency job)
+                  last-ts (->> messages (sort-by :ts) last :ts)
                   last-datetime (-> last-ts
                                     (string/replace #"\..+" "")
                                     (Long/parseLong)
                                     (java.time.Instant/ofEpochSecond))
                   updates {:target_url (:archive-url archival-response)
-                           :frequency (:frequency job)
+                           :frequency frequency
                            :n_runs (or 1 (inc (:n_runs job)))
                            :last_slack_conversation_ts last-ts
                            :last_slack_conversation_datetime last-datetime
                            ;; TODO: util fn to calculate due date based on frequency
-                           :due_date (java.time.LocalDateTime/now)
-                           :updated_at (java.time.LocalDateTime/now)}]
+                           :due_date (due-date frequency)
+                           :updated_at (java-time/local-date-time)}]
 
               (sql/update!
                (:db-connection system)
