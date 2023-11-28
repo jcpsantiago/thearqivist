@@ -59,9 +59,9 @@
         {:keys [channel_id user_id]} (-> view :private_metadata read-string)
         frequency (get-in view [:state :values :archive_frequency_selector
                                 :radio_buttons-action :selected_option :value])
-        job-map {:target "confluence" :frequency frequency
-                 :slack_team_id slack-team-id :slack_channel_id channel_id
-                 :owner_slack_user_id user_id :timezone tz :created_at (java.time.Instant/now)}
+        job-map {:jobs/target "confluence" :jobs/frequency frequency
+                 :jobs/slack_team_id slack-team-id :jobs/slack_channel_id channel_id
+                 :jobs/owner_slack_user_id user_id :jobs/timezone tz :jobs/created_at (java.time.Instant/now)}
         job (spec/conform ::core-specs/job job-map)]
 
     (if (spec/invalid? job)
@@ -87,10 +87,12 @@
   "
   [system job]
   (try
-    (sql/insert! (:db-connection system)  :jobs job)
-    (mulog/log ::create-recurrent-job-in-db
-               :success :true
-               :local-time (java.time.LocalDateTime/now))
+    (let [inserted (sql/insert! (:db-connection system) :jobs job)]
+      (mulog/log ::create-recurrent-job-in-db
+                 :success :true
+                 :inserted inserted
+                 :local-time (java.time.LocalDateTime/now))
+      inserted)
 
     (catch Exception e
       (mulog/log ::create-recurrent-job-in-db

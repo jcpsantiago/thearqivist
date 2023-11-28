@@ -4,6 +4,8 @@
   See https://api.slack.com/block-kit/building for the official documentation.
   "
   (:require
+   [clj-slack.views :as slack-views]
+   [jsonista.core :as json]
    [java-time.api :as java-time]))
 
 (defn help-message
@@ -44,7 +46,7 @@
   [request]
   (let [{{{:keys [team_domain channel_name channel_id user_id user_name]} :form} :parameters} request]
     {:type "modal"
-     :callback_id "setup-archival"
+     :callback_id "new-archive-confirmation"
      :title {:type "plain_text" :text "The Arqivist" :emoji true}
      :submit {:type "plain_text" :text "Create archive" :emoji true}
      :close {:type "plain_text" :text "Cancel" :emoji true}
@@ -103,7 +105,7 @@
     {:type "section"
      :fields columns}))
 
-(defn exists-once-confirmation-modal
+(defn exists-once-modal
   "
   Modal informing the user the current channel has already been saved once
   "
@@ -136,6 +138,7 @@
         :text (str "<#" slack_channel_id "> is already archived, "
                    "you can find it <" target_url "|here>.\n")}}
 
+      ;; TODO: extract into function, use for "jobs" command
       (two-column-section
        [["*Owner*: " (str "<@" owner_slack_user_id ">")]
         ["*Created at*: " (str "<!date^" created_at_ts "^{date_short}|" created_at ">")]
@@ -171,7 +174,7 @@
         :text "How often do you want to archive it?"
         :emoji true}}]}))
 
-(defn exists-recurrent-information-modal
+(defn exists-recurrent-modal
   "
   Modal informing the user the current channel already has a recurrent job setup.
   "
@@ -235,3 +238,10 @@
                ".\n")
              "You'll get a notification when it's ready :white_check_mark:")}}]}))
 
+(defn open-job-exists-modal!
+  [existing-job request]
+  (let [trigger_id (get-in request [:parameters :form :trigger_id])
+        open-view! (partial slack-views/open (:slack-connection request))]
+    (if (= "once" (:jobs/frequency existing-job))
+      (open-view! (json/write-value-as-string (exists-once-modal existing-job request)) trigger_id)
+      (open-view! (json/write-value-as-string (exists-recurrent-modal existing-job request)) trigger_id))))

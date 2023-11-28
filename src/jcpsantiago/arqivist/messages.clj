@@ -22,7 +22,7 @@
   The `job` hash-map contains information about the :target, which
   is used to select which method to use.
   "
-  (fn [job _ _ _] (:target job)))
+  (fn [job _ _ _] (:jobs/target job)))
 
 (defmethod archive! "confluence"
   [job slack-connection confluence-credentials messages]
@@ -32,9 +32,6 @@
                        (pmap #(parsers/parse-message job slack-connection %))
                        (sort-by :ts #(compare %2 %1))
                        (map confluence-pages/page-row))]
-    ;; NOTE: the create-content! fn saves data in Confluence's page storage,
-    ;; so we don't save it ourselves. It stores a date as the 'next-update'
-    ;; so we don't need to keep track of scheduling.
     (->> page-rows
          (confluence-pages/archival-page job)
          (confluence-pages/create-content! job confluence-credentials))))
@@ -52,6 +49,8 @@
     "daily"  (java-time/+ (java-time/local-date-time) (java-time/days 1))
     "weekly" (java-time/+ (java-time/local-date-time) (java-time/weeks 1))))
 
+;; TODO:
+;; * clean up in case it's a first-time run and creating the archive fails
 (defn the-scribe
   "
   The scribe is the main function for handling archival jobs.
@@ -59,42 +58,54 @@
   and pulls, prepares and creates archives in the target destination.
   "
   [system job inform? slack-connection target-credentials]
-  (let [{:keys [slack_channel_id owner_slack_user_id]} job
+  (mulog/log ::the-scribe-pre
+             :slack-connection slack-connection
+             :job job
+             :target-credentials target-credentials)
+  (let [{:keys [:jobs/slack_channel_id :jobs/owner_slack_user_id]} job
         channel-info-response (slack-convo/info slack-connection slack_channel_id)
         channel-name (get-in channel-info-response [:channel :name])
-        messages (slack-utils/fetch-conversation-history slack_channel_id slack-connection)]
+        messages (slack-utils/fetch-conversation-history slack-connection slack_channel_id)]
+    (mulog/log ::the-scribe-post-1
+               :messages messages
+               :channel-info channel-info-response)
 
+    ;; TODO: check if messages is alright
     (if (seq channel-name)
       ;; TODO: create a spec for a uniform response format for archive!
       (let [archival-response (-> (assoc job :channel-name channel-name)
                                   (archive! slack-connection target-credentials messages))]
         (if (contains? archival-response :archive-url)
           (do
-            (let [frequency (:frequency job)
+            (let [frequency (:jobs/frequency job)
                   last-ts (->> messages (sort-by :ts) last :ts)
                   last-datetime (-> last-ts
                                     (string/replace #"\..+" "")
                                     (Long/parseLong)
                                     (java.time.Instant/ofEpochSecond))
-                  updates {:target_url (:archive-url archival-response)
-                           :frequency frequency
-                           :n_runs (or 1 (inc (:n_runs job)))
-                           :last_slack_conversation_ts last-ts
-                           :last_slack_conversation_datetime last-datetime
-                           ;; TODO: util fn to calculate due date based on frequency
-                           :due_date (due-date frequency)
-                           :updated_at (java-time/local-date-time)}]
+                  n-runs (if (nil? (:jobs/n_runs job))
+                           1
+                           (inc (:jobs/n_runs job)))
+                  updates {:jobs/target_url (:archive-url archival-response)
+                           :jobs/frequency frequency
+                           ;; FIXME: n_runs can't be null, inc explodes, check beforehand
+                           :jobs/n_runs n-runs
+                           :jobs/last_slack_conversation_ts last-ts
+                           :jobs/last_slack_conversation_datetime last-datetime
+                           :jobs/due_date (due-date frequency)
+                           :jobs/updated_at (java-time/local-date-time)}]
 
               (sql/update!
                (:db-connection system)
                :jobs
                updates
-               {:slack_team_id (:slack_team_id job)})
+               {:id (:jobs/id job)})
 
               (mulog/log ::scribe-archive
                          :success :true
                          :job job
-                         :team-id (:slack_team_id job)
+                         :updates updates
+                         :team-id (:jobs/slack_team_id job)
                          :local-time (java.time.LocalDateTime/now)))
 
             (when inform?
@@ -128,9 +139,17 @@
   (try
     (let [db-connection (:db-connection system)
           atlassian_tenant_id (get-in request [:slack-team-attributes :slack_teams/atlassian_tenant_id])
-          confluence-tenant-attributes (sql/get-by-id db-connection :atlassian_tenants atlassian_tenant_id)]
+          confluence-tenant-attributes (sql/get-by-id db-connection :atlassian_tenants atlassian_tenant_id)
+          db-io-result (db-fn system job)
+          job (merge job (select-keys db-io-result [:jobs/id]))]
 
-      (db-fn system job)
+      (mulog/log ::start-job-db-io
+                 ;; FIXME: get the name of the function used as a string
+                 :db-fn db-fn
+                 :job job
+                 :db-io-result db-io-result
+                 :success :true
+                 :local-time (java.time.LocalDateTime/now))
 
       (the-scribe system job true (:slack-connection request) confluence-tenant-attributes)
 
@@ -139,12 +158,12 @@
                  :local-time (java.time.LocalDateTime/now)))
 
     (catch Exception e
-      (mulog/log ::create-and-start-job
-                 :success :false
-                 :error e
-                 :error-message (ex-message e)
-                 :local-time (java.time.LocalDateTime/now))
-
-      (let [{:keys [channel_id user_id]} (-> request :parameters :form :payload :view :private_metadata read-string)]
-        (core-utils/ephemeral-error-message! user_id channel_id (:slack-connection request))))))
+      (do
+        (mulog/log ::create-and-start-job
+                   :success :false
+                   :error e
+                   :error-message (ex-message e)
+                   :local-time (java.time.LocalDateTime/now))
+        (let [{:keys [channel_id user_id]} (-> request :parameters :form :payload :view :private_metadata read-string)]
+          (core-utils/ephemeral-error-message! user_id channel_id (:slack-connection request)))))))
 

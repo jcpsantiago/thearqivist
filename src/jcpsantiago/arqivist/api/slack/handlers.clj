@@ -12,6 +12,7 @@
    [jcpsantiago.arqivist.api.slack.utils :as utils]
    [jcpsantiago.arqivist.messages :as messages]
    [jcpsantiago.arqivist.utils :as core-utils]
+   [jcpsantiago.arqivist.specs :as core-specs]
    [jsonista.core :as json]
    [next.jdbc.sql :as sql]
    ;; needed because PostgreSQL can't translate java datetime into SQL timestamp
@@ -56,11 +57,13 @@
 (defn exists-once-confirmation-handler
   [system request job]
   (try
-    (let [{:keys [channel_id existing-job]} (get-in request [:parameters :form :payload :view :private_metadata :channel_id])
-          ;; FIXME: do we need this????
-          updated-job (-> existing-job
-                          (assoc :frequency (:frequency job)))]
-      (mulog/log ::handling-existing-job-confirmation
+    (let [existing-job (-> request
+                           (get-in [:parameters :form :payload :view :private_metadata])
+                           ;; FIXME: conform here for safety reasons?
+                           read-string
+                           :existing-job)
+          updated-job (assoc existing-job :jobs/frequency (:jobs/frequency job))]
+      (mulog/log ::handle-exists-once-confirmation
                  :job existing-job
                  :request request
                  :local-time (java.time.LocalDateTime/now))
@@ -72,12 +75,12 @@
       (update-modal-response ui/confirm-job-started-modal request))
 
     (catch Exception e
-      (mulog/log ::handle-setup-archival-modal
+      (mulog/log ::handle-exists-once-confirmation
                  :success :false
                  :error e
                  :error-message (ex-message e)
-                 :local-time (java.time.LocalDateTime/now)))))
-      ;; TODO: add ephemeral error message
+                 :local-time (java.time.LocalDateTime/now))
+      (response (core-utils/error-response-text)))))
 
 (defn view-submission
   "
@@ -89,9 +92,8 @@
         job (core-utils/request->job request)]
 
     (case callback-id
-      "setup-archival" (setup-archival-handler system request job)
-      ;; TODO: also needs the new job, update existing job inside with the new information
-      ;; otherwise we're overwriting with the same information over and over, or losing new info
+      "new-archive-confirmation" (setup-archival-handler system request job)
+      ;; NOTE: the existing-job is passed via the private metadata, thus no further db i/o needed
       "exists-once-confirmation" (exists-once-confirmation-handler system request job))))
 
 (defn interaction-handler
@@ -139,19 +141,26 @@
   [system request]
   (try
     (let [channel_id (get-in request [:parameters :form :channel_id])
-          open-view (partial slack-views/open (:slack-connection request))
+          open-view! (partial slack-views/open (:slack-connection request))
           trigger_id (get-in request [:parameters :form :trigger_id])
-          existing-job (sql/get-by-id (:db-connection system)
-                                      :jobs
-                                      channel_id
-                                      :slack_channel_id
-                                      {})]
+          existing-job-row (sql/get-by-id (:db-connection system)
+                                          :jobs
+                                          channel_id
+                                          :slack_channel_id
+                                          {})
+          existing-job (spec/conform ::core-specs/job existing-job-row)]
 
-      (if (empty? existing-job)
-        (let [res (open-view (json/write-value-as-string (ui/setup-archival-modal request)) trigger_id)]
+      (mulog/log ::setup-archival-pre
+                 :channel_id channel_id
+                 :trigger_id trigger_id
+                 :existing-job existing-job-row)
+
+      (cond
+        (empty? existing-job-row)
+        (let [res (open-view! (json/write-value-as-string (ui/setup-archival-modal request)) trigger_id)]
           (if (:ok res)
             (do
-              (mulog/log ::save-to-confluence-modal
+              (mulog/log ::setup-first-time-archival-modal
                          :success :true
                          :local-time (java.time.LocalDateTime/now))
               (response ""))
@@ -159,33 +168,55 @@
             ;; Couldn't open the setup archive modal
             ;; response-metadata has the reason, see slack docs
             (do
-              (mulog/log ::save-to-confluence-modal
+              (mulog/log ::setup-first-time-archival-modal
                          :success :false
                          :error (:error res)
                          :response-metadata (:response_metadata res)
                          :local-time (java.time.LocalDateTime/now))
               (response (core-utils/error-response-text)))))
 
-       ;; If a job already exists in the database ↓
-       ;; TODO: use cond here to account for all cases like once in db and once in setup modal
-        (if (= "once" (:jobs/frequency existing-job))
-          (do
-            (mulog/log ::open-exists-once-confirmation-modal)
-            (open-view
-             (json/write-value-as-string (ui/exists-once-confirmation-modal existing-job request))
-             trigger_id))
+        ;; If a job already exists in the database ↓
+        (spec/valid? ::core-specs/job existing-job-row)
+        (let [open-view-response (ui/open-job-exists-modal! existing-job request)]
+          (if (:ok open-view-response)
+            (do
+              (mulog/log ::open-job-exists-modal
+                         :success :true
+                         :local-time (java.time.LocalDateTime/now))
+              (response ""))
 
-          (do
-            (mulog/log ::open-exists-recurrent-confirmation-modal)
-            (open-view
-             (json/write-value-as-string (ui/exists-recurrent-information-modal existing-job request))
-             trigger_id)))))
+            (do
+              (mulog/log ::open-job-exists-modal
+                         :success :false
+                         :error (:error open-view-response)
+                         :response-metadata (:response_metadata open-view-response)
+                         :local-time (java.time.LocalDateTime/now))
+              (response (core-utils/error-response-text)))))
+
+        (spec/invalid? existing-job)
+        (do
+          (mulog/log ::setup-archival-modal
+                     :success :false
+                     :message "Existing job from db does not conform to spec"
+                     :explanation (spec/explain-data ::core-specs/job existing-job-row)
+                     :local-time (java.time.LocalDateTime/now))
+          (response (core-utils/error-response-text)))
+
+        :else
+        (do
+          (mulog/log ::open-job-exists-modal
+                     :success :false
+                     :message "Unknown error, reached end of cond"
+                     :explanation (spec/explain-data ::core-specs/job existing-job-row)
+                     :local-time (java.time.LocalDateTime/now))
+          (response (core-utils/error-response-text)))))
 
     (catch Exception e
-      (mulog/log ::save-to-confluence-modal
+      (mulog/log ::setup-archival-modal
                  :success :false
                  :error e
-                 :request request))))
+                 :request request)
+      (response (core-utils/error-response-text)))))
 
 (defn slash-command
   "

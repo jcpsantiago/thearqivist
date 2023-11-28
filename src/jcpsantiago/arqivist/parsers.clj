@@ -17,7 +17,7 @@
 
         datetime (-> (:ts message)
                      (string/replace #"\..+" "")
-                     (utils/ts->datetime (:timezone job))
+                     (utils/ts->datetime (:jobs/timezone job))
                      (.format formatter))]
     (assoc message :datetime datetime)))
 

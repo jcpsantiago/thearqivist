@@ -5,25 +5,26 @@
   (:require
    [clojure.spec.alpha :as spec]))
 
-(spec/def ::id int?)
-(spec/def ::slack_team_id int?)
-(spec/def ::slack_channel_id string?)
-(spec/def ::owner_slack_user_id string?)
-(spec/def ::timezone string?)
-(spec/def ::frequency #{"once" "daily" "weekly"})
-(spec/def ::target #{"confluence"})
-(spec/def ::target_url string?)
-(spec/def ::last_slack_conversation_datetime inst?)
-(spec/def ::last_slack_conversation_ts string?)
-(spec/def ::due_date inst?)
-(spec/def ::n_runs int?)
-(spec/def ::updated_at inst?)
-(spec/def ::created_at inst?)
+(spec/def :jobs/id int?)
+(spec/def :jobs/slack_team_id int?)
+(spec/def :jobs/slack_channel_id string?)
+(spec/def :jobs/owner_slack_user_id string?)
+(spec/def :jobs/timezone string?)
+(spec/def :jobs/frequency #{"once" "daily" "weekly"})
+(spec/def :jobs/target #{"confluence"})
+(spec/def :jobs/target_url string?)
+(spec/def :jobs/last_slack_conversation_datetime inst?)
+(spec/def :jobs/last_slack_conversation_ts string?)
+;; NOTE: `once` jobs won't have a due date
+(spec/def :jobs/due_date (spec/nilable inst?))
+(spec/def :jobs/n_runs int?)
+(spec/def :jobs/updated_at inst?)
+(spec/def :jobs/created_at inst?)
 
 (spec/def ::job
   (spec/keys
-   :req-un [::slack_team_id ::slack_channel_id ::owner_slack_user_id ::timezone
-            ::frequency ::target]
-   :opt-un [::id ::last_slack_conversation_ts ::due_date ::n_runs ::updated_at ::created_at
-            ::target_url ::last_slack_conversation_datetime]))
+   :req [:jobs/slack_team_id :jobs/slack_channel_id :jobs/owner_slack_user_id :jobs/timezone
+         :jobs/frequency :jobs/target]
+   :opt [:jobs/id :jobs/last_slack_conversation_ts :jobs/due_date :jobs/n_runs :jobs/updated_at :jobs/created_at
+         :jobs/target_url :jobs/last_slack_conversation_datetime]))
 
