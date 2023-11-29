@@ -197,11 +197,14 @@
   a user is in, as returned from the users.conversations Slack API method.
   "
   [channel-id user-conversations]
-  (let [member-channels (->> (:channels user-conversations)
+  (let [member-channels (->> user-conversations
+                             ;; first is :good-response or :error-response, see spec
+                             second
+                             :channels
                              (map :id)
                              (into #{}))]
 
-    (some member-channels [channel-id])))
+    (not= nil (some member-channels [channel-id]))))
 
 (defn try-conversations-join
   "
@@ -221,22 +224,6 @@
                    :local-time (java.time.LocalDateTime/now))
         (handler request))
 
-      (some #{"method_not_supported_for_channel_type" "channel_not_found"}
-            [(:error conversations-join-response)])
-      (do
-        (mulog/log ::try-conversations-join
-                   :success :false
-                   :message "Possibly tried to join a private channel"
-                   :local-time (java.time.LocalDateTime/now))
-        (response
-         (str "⚠️  It looks like you are trying to archive a *private channel*. "
-              "Archived channels do not carry over permissions, so assume the contents of the archive will be public.\n"
-              "If you are sure that is what you want, please invite me to this "
-              "channel first by mentioning me with <@the_arqivist>, "
-              "and then use the slash command again.")))
-
-      ;; NOTE: the cond above is also (not good-response?), but has specific error types
-      ;; which we handle differently
       (not good-response?)
       (do
         (mulog/log ::try-conversations-join
@@ -268,29 +255,44 @@
   (fn [request]
     (let [channel_id (get-in request [:parameters :form :channel_id])
           slack-connection (:slack-connection request)
-          users-conversations-response (slack-users/conversations slack-connection)
-          users-conversations (spec/conform ::specs/users-conversations users-conversations-response)
-          member? (conversation-member? channel_id users-conversations-response)
-          valid-spec? (spec/valid? ::specs/users-conversations users-conversations-response)
-          good-response? (= (first users-conversations) :good-response)]
+          conversations-info-response (slack-convo/info slack-connection channel_id)
+          conversations-info (spec/conform ::specs/conversations-info conversations-info-response)
+          valid-spec? (spec/valid? ::specs/conversations-info conversations-info-response)
+          good-response? (= (first conversations-info) :good-response)
+          {:keys [is_member is_private]} (-> conversations-info second :channel)]
 
       (cond
-        (and valid-spec? good-response? member?)
+        (and valid-spec? good-response? is_member)
         (do
           (mulog/log ::join-slack-channel
                      :success :true
                      :local-time (java.time.LocalDateTime/now))
           (handler request))
 
-        (and valid-spec? good-response? (not member?))
+        (and valid-spec? good-response? (not is_member) (not is_private))
         (try-conversations-join slack-connection channel_id handler request)
+
+        (or
+         (and valid-spec? good-response? (not is_member) is_private)
+         (= (:error conversations-info-response) "channel_not_found"))
+        (do
+          (mulog/log ::join-slack-channel
+                     :success :false
+                     :message "Not a member of the private channel yet, informed user"
+                     :local-time (java.time.LocalDateTime/now))
+          (response
+           (str "⚠️  It looks like you are trying to archive a *private channel*. "
+                "Archived channels do not carry over permissions, so assume the contents of the archive will be public.\n"
+                "If you are sure that is what you want, please invite me to this "
+                "channel first by mentioning me with <@the_arqivist>, "
+                "and then use the slash command again.")))
 
         (not good-response?)
         (do
           (mulog/log ::join-slack-channel
                      :success :false
-                     :message "Error calling the users.conversations Slack API method"
-                     :slack-error (:error users-conversations-response)
+                     :message "Error calling the conversations.info Slack API method"
+                     :slack-error (:error conversations-info-response)
                      :local-time (java.time.LocalDateTime/now))
           (response (core-utils/error-response-text)))
 
@@ -298,8 +300,8 @@
         (do
           (mulog/log ::join-slack-channel
                      :success :false
-                     :message "Response from the users.conversations Slack API method does not conform to spec"
-                     :explanation (spec/explain-data ::specs/users-conversations users-conversations-response);
+                     :message "Response from the conversations.info Slack API method does not conform to spec"
+                     :explanation (spec/explain-data ::specs/conversations-info conversations-info-response);
                      :local-time (java.time.LocalDateTime/now))
           (response (core-utils/error-response-text)))))))
 

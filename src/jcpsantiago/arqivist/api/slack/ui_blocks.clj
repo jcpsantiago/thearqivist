@@ -105,16 +105,34 @@
     {:type "section"
      :fields columns}))
 
+;; TODO: move to utils ns
+(defn to-seconds-from-epoch
+  [epoch]
+  (quot (java-time/to-millis-from-epoch epoch) 1000))
+
+(defn job-characteristics
+  [job]
+  (let [{:keys [:jobs/owner_slack_user_id :jobs/n_runs :jobs/frequency
+                :jobs/created_at :jobs/last_slack_conversation_datetime]} job
+        created_at_ts (to-seconds-from-epoch created_at)
+        last-slack-conversation-ts (to-seconds-from-epoch last_slack_conversation_datetime)]
+    (two-column-section
+     [["*Owner*: " (str "<@" owner_slack_user_id ">")]
+      ["*Created at*: " (str "<!date^" created_at_ts "^{date_short}|" created_at ">")]
+      ["*Frequency*:" (str "`" frequency "`")]
+      ["*Archived until*:" (str "<!date^" last-slack-conversation-ts "^{date_num} {time}|" last_slack_conversation_datetime ">")]
+      ["*Times executed*:" (str n_runs)]])))
+
 (defn exists-once-modal
   "
   Modal informing the user the current channel has already been saved once
   "
-  [existing-job request]
+  [request existing-job]
   (let [{{{:keys [team_domain channel_name channel_id user_id user_name]} :form} :parameters} request
-        {:keys [:jobs/owner_slack_user_id :jobs/slack_channel_id :jobs/n_runs
-                :jobs/created_at :jobs/target_url :jobs/last_slack_conversation_datetime]} existing-job
-        created_at_ts (quot (java-time/to-millis-from-epoch created_at) 1000)
+        {:keys [:jobs/last_slack_conversation_datetime
+                :jobs/slack_channel_id :jobs/target_url]} existing-job
         last-slack-conversation-ts (quot (java-time/to-millis-from-epoch last_slack_conversation_datetime) 1000)]
+
     {:type "modal"
      :callback_id "exists-once-confirmation"
      :title {:type "plain_text" :text "The Arqivist" :emoji true}
@@ -138,13 +156,7 @@
         :text (str "<#" slack_channel_id "> is already archived, "
                    "you can find it <" target_url "|here>.\n")}}
 
-      ;; TODO: extract into function, use for "jobs" command
-      (two-column-section
-       [["*Owner*: " (str "<@" owner_slack_user_id ">")]
-        ["*Created at*: " (str "<!date^" created_at_ts "^{date_short}|" created_at ">")]
-        ["*Frequency*:" "`once`"]
-        ["*Archived until*:" (str "<!date^" last-slack-conversation-ts "^{date_num} {time}|" last_slack_conversation_datetime ">")]
-        ["*Times executed*:" (str n_runs)]])
+      (job-characteristics existing-job)
 
       {:type "section"
        :text
@@ -174,49 +186,37 @@
         :text "How often do you want to archive it?"
         :emoji true}}]}))
 
+;; TODO: add CRUD options to the modal
 (defn exists-recurrent-modal
   "
   Modal informing the user the current channel already has a recurrent job setup.
   "
   [request existing-job]
-  (let [{{{:keys [team_domain channel_name channel_id user_id user_name]} :form} :parameters} request
-        {:keys [:jobs/owner_slack_user_id :jobs/slack_channel_id
-                :jobs/created_at :jobs/target_url]} existing-job]
+  (let [;; {{{:keys [team_domain channel_name channel_id user_id user_name]} :form} :parameters} request
+        {:keys [:jobs/slack_channel_id :jobs/target_url]} existing-job]
     {:type "modal"
      :callback_id "exists-once-confirmation"
-     :title {:type "plain_text" :text "Previous archive found" :emoji true}
-     :submit {:type "plain_text" :text "Create archive" :emoji true}
-     :close {:type "plain_text" :text "Cancel" :emoji true}
-     :private_metadata (pr-str {:channel_name channel_name
-                                :channel_id channel_id
-                                :user_name user_name
-                                :user_id user_id
-                                :domain team_domain})
+     :title {:type "plain_text" :text "The Arqivist" :emoji true}
+     :close {:type "plain_text" :text "Close" :emoji true}
+     ;; :private_metadata (pr-str {:channel_name channel_name
+     ;;                            :channel_id channel_id
+     ;;                            :user_name user_name
+     ;;                            :user_id user_id
+     ;;                            :domain team_domain})
+
      :blocks
-     [{:type "section"
+     [{:type "header"
+       :text {:type "plain_text"
+              :text "Previous archive found"
+              :emoji true}}
+
+      {:type "section"
        :text
        {:type "mrkdwn"
-        :text (str "<@" owner_slack_user_id "> already created a recurrent job " "<#" slack_channel_id ">"
-                   " once in " created_at ". You can find it <here|" target_url ">\n"
-                   "Would you like to setup recurrent archival instead of a one time job? "
-                   "If so, select another frequency, otherwise please select `once` again.")}}
-      {:type "divider"}
-      {:type "input"
-       :element
-       {:type "radio_buttons"
-        :options
-        [{:text {:type "plain_text" :text "Once" :emoji true}
-          :value "once"}
-         {:text {:type "plain_text" :text "Daily" :emoji true}
-          :value "daily"}
-         {:text {:type "plain_text" :text "Weekly" :emoji true}
-          :value "weekly"}]
-        :action_id "radio_buttons-action"}
-       :block_id "archive_frequency_selector"
-       :label
-       {:type "plain_text"
-        :text "How often do you want to archive it?"
-        :emoji true}}]}))
+        :text (str "<#" slack_channel_id "> is already being archived, "
+                   "you can find it <" target_url "|here>.\n")}}
+
+      (job-characteristics existing-job)]}))
 
 (defn confirm-job-started-modal
   [request]
@@ -239,9 +239,9 @@
              "You'll get a notification when it's ready :white_check_mark:")}}]}))
 
 (defn open-job-exists-modal!
-  [existing-job request]
+  [request existing-job]
   (let [trigger_id (get-in request [:parameters :form :trigger_id])
         open-view! (partial slack-views/open (:slack-connection request))]
     (if (= "once" (:jobs/frequency existing-job))
-      (open-view! (json/write-value-as-string (exists-once-modal existing-job request)) trigger_id)
-      (open-view! (json/write-value-as-string (exists-recurrent-modal existing-job request)) trigger_id))))
+      (open-view! (json/write-value-as-string (exists-once-modal request existing-job)) trigger_id)
+      (open-view! (json/write-value-as-string (exists-recurrent-modal request existing-job)) trigger_id))))

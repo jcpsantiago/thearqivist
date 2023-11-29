@@ -177,7 +177,7 @@
 
         ;; If a job already exists in the database ↓
         (spec/valid? ::core-specs/job existing-job-row)
-        (let [open-view-response (ui/open-job-exists-modal! existing-job request)]
+        (let [open-view-response (ui/open-job-exists-modal! request existing-job)]
           (if (:ok open-view-response)
             (do
               (mulog/log ::open-job-exists-modal

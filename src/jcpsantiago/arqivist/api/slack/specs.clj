@@ -25,9 +25,12 @@
 (spec/def ::token_type #{"bot" "user"})
 (spec/def ::text string?)
 
+(spec/def ::is_member boolean?)
+(spec/def ::is_private boolean?)
+
 (spec/def ::channel
   (spec/keys
-   :req-un [::id ::name]))
+   :req-un [::id ::name ::is_member ::is_private]))
 
 ;; Error response
 (spec/def ::ok boolean?)
@@ -75,13 +78,10 @@
    :good-response (spec/keys :req-un [::ok])
    :error-response ::error-response))
 
-;; User conversations API endpoint ------------------------------
-(spec/def ::channels
-  (spec/coll-of ::channel))
-
-(spec/def ::users-conversations
+;; Conversations info API endpoint ------------------------------
+(spec/def ::conversations-info
   (spec/or
-   :good-response (spec/keys :req-un [::ok ::channels])
+   :good-response (spec/keys :req-un [::ok ::channel])
    :error-response ::error-response))
 
 ;; Conversations join API endpoint ------------------------------
