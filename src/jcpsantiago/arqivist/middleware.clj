@@ -15,7 +15,6 @@
    [jcpsantiago.arqivist.api.slack.specs :as specs]
    [ring.util.response :refer [bad-request response]]
    [clj-slack.conversations :as slack-convo]
-   [clj-slack.users :as slack-users]
    [jsonista.core :as json]
    [clojure.core :as c]))
 
@@ -132,7 +131,6 @@
         ;; TODO: add more non PII details to context
         (mulog/with-context {:slack-team-id team_id}
           (cond
-
             (and (spec/valid? ::specs/team-attributes slack-team-attributes)
                  (seq (:token slack-connection)))
             (do
@@ -151,7 +149,8 @@
                          :message "Slack team attributes did not conform to spec"
                          ;; FIXME: The explanation will contain the slack access key!
                          ;; we have to obfuscate that before logging
-                         :explanation (spec/explain-data ::specs/team-attributes slack-team-attributes)
+                         :explanation (spec/explain-data ::specs/team-attributes slack-team-row)
+                         :request request
                          :local-time (java.time.LocalDateTime/now))
               (response (core-utils/error-response-text)))
 
@@ -187,25 +186,10 @@
                    :success :false
                    :exception e
                    :error (.getMessage e)
-                   :local-time (java.time.LocalDateTime/now))))))
+                   :local-time (java.time.LocalDateTime/now))
+        (response (core-utils/error-response-text))))))
 
 ;; Utils and handler for "join slack channel" middleware --- ↓
-
-(defn conversation-member?
-  "
-  Util fn that checks if a channel-id is in the list of channels (aka conversations)
-  a user is in, as returned from the users.conversations Slack API method.
-  "
-  [channel-id user-conversations]
-  (let [member-channels (->> user-conversations
-                             ;; first is :good-response or :error-response, see spec
-                             second
-                             :channels
-                             (map :id)
-                             (into #{}))]
-
-    (not= nil (some member-channels [channel-id]))))
-
 (defn try-conversations-join
   "
   Helper function to the wrap-join-slack-channel middleware.
@@ -352,15 +336,11 @@
           (do
             (mulog/log ::verify-atlassian-server-request
                        :base-url base-url
-                       :incoming-qsh incoming-qsh
-                       :calculated-qsh calculated-qsh
                        :local-time (java.time.LocalDateTime/now))
             (handler request))
           (do
             (mulog/log ::verify-atlassian-server-request
                        :base-url base-url
-                       :incoming-qsh incoming-qsh
-                       :calculated-qsh calculated-qsh
                        :success :false
                        :error "Atlassian JWT is invalid."
                        :local-time (java.time.LocalDateTime/now))
