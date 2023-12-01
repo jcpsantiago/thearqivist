@@ -3,6 +3,7 @@
   (:require
    [clj-slack.oauth :as slack-oauth]
    [clj-slack.views :as slack-views]
+   [clojure.edn :as edn]
    [clojure.spec.alpha :as spec]
    [clojure.string :refer [trim]]
    [com.brunobonacci.mulog :as mulog]
@@ -51,22 +52,18 @@
                  :success :false
                  :error e
                  :error-message (ex-message e)
-                 :local-time (java.time.LocalDateTime/now)))))
-      ;; TODO: add ephemeral error message
+                 :local-time (java.time.LocalDateTime/now))
+      (response (core-utils/error-response-text)))))
 
 (defn exists-once-confirmation-handler
   [system request job]
   (try
     (let [existing-job (-> request
                            (get-in [:parameters :form :payload :view :private_metadata])
-                           ;; FIXME: conform here for safety reasons?
-                           read-string
+                           edn/read-string
                            :existing-job)
           updated-job (assoc existing-job :jobs/frequency (:jobs/frequency job))]
-      (mulog/log ::handle-exists-once-confirmation
-                 :job existing-job
-                 :request request
-                 :local-time (java.time.LocalDateTime/now))
+
       (future
         (mulog/with-context (mulog/local-context)
           (messages/start-job system request updated-job core-utils/update-job!)))
@@ -198,7 +195,8 @@
           (mulog/log ::setup-archival-modal
                      :success :false
                      :message "Existing job from db does not conform to spec"
-                     :explanation (spec/explain-data ::core-specs/job existing-job-row)
+                     ;; FIXME: shares the api token in the logs
+                     ;; :explanation (spec/explain-data ::core-specs/job existing-job-row)
                      :local-time (java.time.LocalDateTime/now))
           (response (core-utils/error-response-text)))
 
@@ -207,7 +205,8 @@
           (mulog/log ::open-job-exists-modal
                      :success :false
                      :message "Unknown error, reached end of cond"
-                     :explanation (spec/explain-data ::core-specs/job existing-job-row)
+                     ;; FIXME: shares the api token in the logs
+                     ;; :explanation (spec/explain-data ::core-specs/job existing-job-row)
                      :local-time (java.time.LocalDateTime/now))
           (response (core-utils/error-response-text)))))
 
