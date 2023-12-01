@@ -3,7 +3,6 @@
    a REPL-heavy lifestyle."
   (:require
    [com.brunobonacci.mulog :as mulog]
-   [clojure.string :as string]
    [donut.system :as donut]
    [hikari-cp.core :as hikari]
    [org.httpkit.client :as http-client]
