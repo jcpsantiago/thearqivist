@@ -50,7 +50,9 @@ After installing The Arqivist in Slack, you can interact with the bot in two way
 ## Hacking locally
 
 * Start a Postgres instance with `docker compose up -d postgres`
-* Start a REPL with `make repl`
+* Start a REPL with either:
+    * `make repl` rich REPL prompt (requires [Practicalli Clojure CLI Config](https://practical.li/clojure/clojure-cli/practicalli-config/)) 
+    * `clj -A:dev/env` for a basic repl prompt
 * Start the system with `(start)` in the Clojure REPL
 * `make lint` to check for format and lint issue, `make lint-fix` to automatically fix them (stage or commit other changes first) - requires node.js locally
 
