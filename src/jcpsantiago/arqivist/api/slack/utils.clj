@@ -54,7 +54,7 @@
   Fetches messages from a Slack conversation, including replies in threads.
   Returns a list of Slack conversations
   "
-  [channel-id slack-connection]
+  [slack-connection channel-id]
   (try
     (let [messages (->> (fetch-messages slack-connection channel-id)
                         ;; FIXME: we are looping twice over all messages

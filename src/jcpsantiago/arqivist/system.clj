@@ -3,7 +3,6 @@
    a REPL-heavy lifestyle."
   (:require
    [com.brunobonacci.mulog :as mulog]
-   [clojure.string :as string]
    [donut.system :as donut]
    [hikari-cp.core :as hikari]
    [org.httpkit.client :as http-client]
@@ -25,36 +24,6 @@
         :tunnels
         first
         :public_url)))
-
-(defn parse-db-uri
-  "
-  Splits a uri with shape
-  postgres://<username>:<password>@<host>:<port>/<dbname>
-  into parts
-  "
-  [uri]
-  (drop 1 (string/split uri #"://|:|@|/")))
-
-(defn create-map-from-uri
-  "
-  Takes a uri of the form postgres://<username>:<password>@<host>:<port>/<dbname>
-  and turns it into a map. This is needed because sometimes that's all we get e.g. from Dokku
-  see also https://github.com/dokku/dokku-redis/pull/131#issuecomment-1420780031
-  "
-  [uri]
-  (let [parsed (parse-db-uri uri)]
-    (into {:adapter "postgresql"}
-          (zipmap [:username :password :server-name :port-number :database-name] parsed))))
-
-(defn database-uri
-  "
-  Returns a map with {:jdbc-url uri} when app-env = DEV,
-  or a map with :user :password :host :port and :dbname if used in prod
-  "
-  [uri app-env]
-  (if (= "dev" app-env)
-    {:jdbc-url uri}
-    (create-map-from-uri uri)))
 
 (def event-logger
   "mulog log publisher component"
@@ -93,7 +62,8 @@
    Uses HikariCP to create and manage a connection pool."
   #::donut{:start (fn create-db-connection
                     [{{:keys [options]} ::donut/config}]
-                    (mulog/log ::creating-db-connection :local-time (java.time.LocalDateTime/now))
+                    (mulog/log ::creating-db-connection
+                               :local-time (java.time.LocalDateTime/now))
                     (hikari/make-datasource options))
 
            :stop (fn closing-db-connection
@@ -161,15 +131,13 @@
                                   (System/getenv "ARQIVIST_PORT")
                                   "8989"))
 
-            :datasource-options (merge
-                                 {;; NOTE: No idea what each of these actually do, should learn :D
-                                  :maximum-pool-size 5
-                                  :minimum-idle 2
-                                  :idle-timeout 12000
-                                  :max-lifetime 300000}
-                                 (database-uri
-                                  (or (System/getenv "DATABASE_URL") "jdbc:postgresql://localhost/arqivist?user=arqivist&password=arqivist")
-                                  service-profile))}
+            :datasource-options {;; NOTE: No idea what each of these actually do, should learn :D
+                                 :maximum-pool-size 5
+                                 :minimum-idle 2
+                                 :idle-timeout 12000
+                                 :max-lifetime 300000
+                                 :jdbc-url (or (System/getenv "DATABASE_URL")
+                                               "jdbc:postgresql://localhost/arqivist?user=arqivist&password=arqivist")}}
 
       ;; Event logger
       :event-log {:publisher event-logger}

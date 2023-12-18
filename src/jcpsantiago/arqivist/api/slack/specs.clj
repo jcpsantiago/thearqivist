@@ -25,9 +25,12 @@
 (spec/def ::token_type #{"bot" "user"})
 (spec/def ::text string?)
 
+(spec/def ::is_member boolean?)
+(spec/def ::is_private boolean?)
+
 (spec/def ::channel
   (spec/keys
-   :req-un [::id ::name]))
+   :req-un [::id ::name ::is_member ::is_private]))
 
 ;; Error response
 (spec/def ::ok boolean?)
@@ -75,13 +78,10 @@
    :good-response (spec/keys :req-un [::ok])
    :error-response ::error-response))
 
-;; User conversations API endpoint ------------------------------
-(spec/def ::channels
-  (spec/coll-of ::channel))
-
-(spec/def ::users-conversations
+;; Conversations info API endpoint ------------------------------
+(spec/def ::conversations-info
   (spec/or
-   :good-response (spec/keys :req-un [::ok ::channels])
+   :good-response (spec/keys :req-un [::ok ::channel])
    :error-response ::error-response))
 
 ;; Conversations join API endpoint ------------------------------
@@ -180,7 +180,6 @@
 ;; Internal representations ------------------------------------------------
 ;; Slack team as stored in the production database
 (spec/def :slack_teams/id pos-int?)
-(spec/def :slack_teams/uuid uuid?)
 (spec/def :slack_teams/app_id string?)
 (spec/def :slack_teams/external_team_id string?)
 (spec/def :slack_teams/team_name string?)
@@ -193,7 +192,7 @@
 
 (spec/def ::team-attributes
   (spec/keys
-   :req [:slack_teams/id :slack_teams/uuid :slack_teams/app_id
+   :req [:slack_teams/id :slack_teams/app_id
          :slack_teams/external_team_id :slack_teams/team_name
          :slack_teams/registering_user :slack_teams/scopes :slack_teams/access_token
          :slack_teams/bot_user_id :slack_teams/created_at :slack_teams/atlassian_tenant_id]))

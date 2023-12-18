@@ -5,25 +5,26 @@
   (:require
    [clojure.spec.alpha :as spec]))
 
-(spec/def ::channel-id string?)
-(spec/def ::channel-name string?)
-(spec/def ::user-id string?)
-(spec/def ::user-name string?)
-(spec/def ::domain string?)
-(spec/def ::created-at inst?)
-(spec/def ::frequency #{"once" "daily" "weekly"})
-(spec/def ::target #{:confluence})
-(spec/def ::action #{"create" "update"})
-(spec/def ::next-update inst?)
-(spec/def ::thread-ts string?)
-(spec/def ::timezone string?)
+(spec/def :jobs/id int?)
+(spec/def :jobs/slack_team_id int?)
+(spec/def :jobs/slack_channel_id string?)
+(spec/def :jobs/owner_slack_user_id string?)
+(spec/def :jobs/timezone string?)
+(spec/def :jobs/frequency #{"once" "daily" "weekly"})
+(spec/def :jobs/target #{"confluence"})
+(spec/def :jobs/target_url string?)
+(spec/def :jobs/last_slack_conversation_datetime inst?)
+(spec/def :jobs/last_slack_conversation_ts string?)
+;; NOTE: `once` jobs won't have a due date
+(spec/def :jobs/due_date (spec/nilable inst?))
+(spec/def :jobs/n_runs int?)
+(spec/def :jobs/updated_at inst?)
+(spec/def :jobs/created_at inst?)
 
 (spec/def ::job
   (spec/keys
-   :req-un [::channel-id ::channel-name ::domain
-            ::user-id ::user-name ::timezone
-            ::created-at ::frequency ::target ::action]
-   ;; FIXME: next-update shouldn't be opt, but it's not implemented yet
-   :opt-un [::thread-ts ::next-update]))
-
+   :req [:jobs/slack_team_id :jobs/slack_channel_id :jobs/owner_slack_user_id :jobs/timezone
+         :jobs/frequency :jobs/target]
+   :opt [:jobs/id :jobs/last_slack_conversation_ts :jobs/due_date :jobs/n_runs :jobs/updated_at :jobs/created_at
+         :jobs/target_url :jobs/last_slack_conversation_datetime]))
 

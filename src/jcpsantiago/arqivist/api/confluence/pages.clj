@@ -20,6 +20,28 @@
         (.atZone zone)
         (.format formatter))))
 
+(defn warning-header
+  "
+  Header 'note' informing the reader the page was created by a bot.
+  "
+  []
+  [:ac:structured-macro {:ac:name "note", :ac:schema-version "1"}
+   [:ac:rich-text-body
+    [:p " This page was created automatically by The Arqivist Slack bot. Do not edit by hand!"]]])
+
+;; Parent page -------------------------------------------------------------
+(defn parent-page
+  []
+  (str
+   (html
+    (list
+     (warning-header)
+     ;; Children display macro, updates a table of contents automatically as we add more child pages
+     ;; see docs in https://confluence.atlassian.com/conf59/children-display-macro-792499081.html
+     [:ac:structured-macro
+      {:ac:name "children"}
+      [:ac:parameter {:ac:name "all"} "true"]]))))
+
 ;; Archival page -----------------------------------------------------------
 ;; NOTE: the official Confluence markup docs are in https://confluence.atlassian.com/doc/confluence-storage-format-790796544.html
 ;; TODO:
@@ -112,10 +134,7 @@
     (str
      (html
       (list
-       ;; Warning header -----------------------------------------------------------------------------
-       [:ac:structured-macro {:ac:name "note", :ac:schema-version "1"}
-        [:ac:rich-text-body
-         [:p " This page was created automatically by The Arqivist Slack bot. Do not edit by hand!"]]]
+       (warning-header)
 
        ;; Start of page ------------------------------------------------------------------------------
        [:p (str "All conversation timestamps are in " timezone " timezone.")]

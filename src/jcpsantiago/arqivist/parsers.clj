@@ -13,9 +13,12 @@
   Uses the timezone present in the job object.
   "
   [message job]
-  (let [datetime (-> (:ts message)
+  (let [formatter (java.time.format.DateTimeFormatter/ofPattern "yyyy-MM-dd HH:mm:ss")
+
+        datetime (-> (:ts message)
                      (string/replace #"\..+" "")
-                     (utils/ts->datetime (:timezone job)))]
+                     (utils/ts->datetime (:jobs/timezone job))
+                     (.format formatter))]
     (assoc message :datetime datetime)))
 
 (defn parse-html-entities
