@@ -123,12 +123,12 @@
   Returns a map with a `two-column-section` UI section block with information about a `job`.
   "
   [job]
-  (let [{:keys [:jobs/owner_slack_user_id :jobs/n_runs :jobs/frequency :jobs/due_date
+  (let [{:keys [:jobs/owner_slack_user_id :jobs/frequency :jobs/due_date
                 :jobs/created_at :jobs/last_slack_conversation_datetime]} job
         created_at_ts (to-seconds-from-epoch created_at)
         last-slack-conversation-ts (to-seconds-from-epoch last_slack_conversation_datetime)
         due_date_ts (to-seconds-from-epoch due_date)]
-    ;; FIXME: Slack does not allow more than 10 fields per block
+    ;; NOTE: Slack does not allow more than 10 fields per block
     ;; each "row" here would be two fields so we can have a max of 5 k-v pairs
     (two-column-section
      [["*Owner*: " (str "<@" owner_slack_user_id ">")]
@@ -136,7 +136,6 @@
       ["*Frequency*:" (str "`" frequency "`")]
       ["*Next archival at*:" (slack-nice-datetime due_date_ts "{date_num} 12:00 AM" due_date)]
       ["*Archived until*:" (slack-nice-datetime last-slack-conversation-ts "{date_num} {time}" last_slack_conversation_datetime)]])))
-;; ["*Times executed*:" (str n_runs)]])))
 
 (defn exists-once-modal
   "
@@ -206,31 +205,22 @@
   "
   Modal informing the user the current channel already has a recurrent job setup.
   "
-  [request existing-job]
-  (let [;; {{{:keys [team_domain channel_name channel_id user_id user_name]} :form} :parameters} request
-        {:keys [:jobs/slack_channel_id :jobs/target_url]} existing-job]
+  [_ existing-job]
+  (let [{:keys [:jobs/slack_channel_id :jobs/target_url]} existing-job]
     {:type "modal"
      :callback_id "exists-once-confirmation"
      :title {:type "plain_text" :text "The Arqivist" :emoji true}
      :close {:type "plain_text" :text "Close" :emoji true}
-     ;; :private_metadata (pr-str {:channel_name channel_name
-     ;;                            :channel_id channel_id
-     ;;                            :user_name user_name
-     ;;                            :user_id user_id
-     ;;                            :domain team_domain})
-
      :blocks
      [{:type "header"
        :text {:type "plain_text"
               :text "Previous archive found"
               :emoji true}}
-
       {:type "section"
        :text
        {:type "mrkdwn"
         :text (str "<#" slack_channel_id "> is already being archived, "
                    "you can find it <" target_url "|here>.\n")}}
-
       (job-characteristics existing-job)]}))
 
 (defn confirm-job-started-modal
