@@ -17,7 +17,7 @@
    [jsonista.core :as json]
    [next.jdbc.sql :as sql]
    ;; needed because PostgreSQL can't translate java datetime into SQL timestamp
-   ;;https://cljdoc.org/d/com.github.seancorfield/next.jdbc/1.3.894/api/next.jdbc.date-time
+   ;; https://cljdoc.org/d/com.github.seancorfield/next.jdbc/1.3.894/api/next.jdbc.date-time
    [next.jdbc.date-time]
    [ring.util.response :refer [bad-request response content-type]]))
 
@@ -43,7 +43,7 @@
     (let [context (mulog/local-context)]
       (future
         (mulog/with-context context
-          (messages/start-job system request job core-utils/persist-job!)))
+                            (messages/start-job system request job core-utils/persist-job!)))
 
       (update-modal-response ui/confirm-job-started-modal request))
 
@@ -66,7 +66,7 @@
 
       (future
         (mulog/with-context (mulog/local-context)
-          (messages/start-job system request updated-job core-utils/update-job!)))
+                            (messages/start-job system request updated-job core-utils/update-job!)))
 
       ;; job started confirmation modal
       (update-modal-response ui/confirm-job-started-modal request))
@@ -107,12 +107,12 @@
 
       (mulog/with-context
        context
-        (mulog/log ::interaction-payload
-                   :local-time (java.time.LocalDateTime/now))
-        (case type
-          "view_submission" (view-submission system request)
-          "message_action" "TODO"
-          (bad-request "Unknown type"))))))
+       (mulog/log ::interaction-payload
+                  :local-time (java.time.LocalDateTime/now))
+       (case type
+         "view_submission" (view-submission system request)
+         "message_action" "TODO"
+         (bad-request "Unknown type"))))))
 
 ;;
 ;; ------------------------------------------------------

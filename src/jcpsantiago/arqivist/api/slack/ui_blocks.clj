@@ -136,7 +136,7 @@
       ["*Frequency*:" (str "`" frequency "`")]
       ["*Next archival at*:" (slack-nice-datetime due_date_ts "{date_num} 12:00 AM" due_date)]
       ["*Archived until*:" (slack-nice-datetime last-slack-conversation-ts "{date_num} {time}" last_slack_conversation_datetime)]])))
-      ;; ["*Times executed*:" (str n_runs)]])))
+;; ["*Times executed*:" (str n_runs)]])))
 
 (defn exists-once-modal
   "
