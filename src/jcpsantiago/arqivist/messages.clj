@@ -5,6 +5,7 @@
   "
   (:require
    [clojure.string :as string]
+   [clojure.spec.alpha :as spec]
    [com.brunobonacci.mulog :as mulog]
    [clj-slack.chat :as slack-chat]
    [clj-slack.conversations :as slack-convo]
@@ -13,6 +14,8 @@
    [jcpsantiago.arqivist.utils :as core-utils]
    [jcpsantiago.arqivist.api.slack.utils :as slack-utils]
    [jcpsantiago.arqivist.api.confluence.pages :as confluence-pages]
+   [jcpsantiago.arqivist.api.confluence.utils :as confluence-utils]
+   [jcpsantiago.arqivist.api.confluence.specs :as confluence-specs]
    [next.jdbc.sql :as sql]
    [next.jdbc.date-time]))
 
@@ -24,17 +27,56 @@
   "
   (fn [job _ _ _] (:jobs/target job)))
 
-(defmethod archive! "confluence"
-  [job slack-connection confluence-credentials messages]
-  ;; TODO: Check if parent page already exists, else create it
-  ;; Save new messages as child pages where title is <min date> — <max date>
-  (let [page-rows (->> messages
+(defn parse-messages-and-create-page
+  "
+  Function orchestrating the creation of Confluence pages.
+  "
+  [job messages parent-id slack-connection confluence-credentials]
+  (let [;; NOTE: Title renders as "YYYY-MM-DD HH:MM — YYYY-MM-DD HH:MM"
+        title (str
+               (core-utils/slack-ts->datetime
+                (min-key :ts messages)
+                (:jobs/timezone job))
+               "—"
+               (core-utils/slack-ts->datetime
+                (max-key :ts messages)
+                (:jobs/timezone job)))
+        page-rows (->> messages
                        (pmap #(parsers/parse-message job slack-connection %))
                        (sort-by :ts #(compare %2 %1))
                        (map confluence-pages/page-row))]
     (->> page-rows
          (confluence-pages/archival-page job)
-         (confluence-pages/create-content! job confluence-credentials))))
+         (confluence-pages/create-content! job title parent-id confluence-credentials))))
+
+(defmethod archive! "confluence"
+  [job slack-connection confluence-credentials messages]
+  (let [{:keys [base_url shared_secret]} confluence-credentials
+        {:keys [slack_channel_id]} job
+        cql-response (confluence-utils/search-with-cql!
+                      base_url shared_secret "slack_channel_id" slack_channel_id)
+        [[response-type response]] (spec/conform ::confluence-specs/cql-search cql-response)
+        parent-page (filter #(= (:channel-name job) %) (:results response))
+        parent-id (get-in (first parent-page) [:content :id])]
+
+    (cond
+      (and (= :good response-type) (= 0 (:size response)))
+      (let [{:keys [page-id]} (-> job
+                                  (confluence-pages/parent-page)
+                                  (confluence-pages/create-content!
+                                   job (:channel-name job) nil confluence-credentials))]
+        (parse-messages-and-create-page job messages page-id slack-connection confluence-credentials))
+
+      (and (= :good response-type) (> 1 (:size response)))
+      (parse-messages-and-create-page job messages parent-id slack-connection confluence-credentials)
+
+      (= :error response-type)
+      (do
+        (mulog/log ::archive-confluence
+                   :success :false
+                   :message "Failed to search Confluence with CQL"
+                   :error (:message response))
+        response))))
 
 (defn due-date
   "
@@ -115,6 +157,7 @@
                (str "<@" owner_slack_user_id "> requested the archival of this channel.\n"
                     "Find it in " (:archive-url archival-response)))))
 
+          ;; Something went wrong, no :archive-url present
           (do
             (mulog/log ::scribe-archive
                        :success :false
