@@ -36,3 +36,32 @@
   (spec/keys
    :req-un [::xdm_e ::xdm_c ::xdm_deprecated_addon_key_do_not_use
             ::lic ::cv ::cp ::jwt]))
+
+;; CQL search responses
+(spec/def ::statusCode int?)
+(spec/def ::message string?)
+
+(spec/def ::cql-search-error
+  (spec/keys
+   :req-un [::statusCode ::message]))
+
+(spec/def ::id string?)
+(spec/def ::title string?)
+
+(spec/def ::content
+  (spec/keys
+   :req-un [::id ::title]))
+
+(spec/def ::size int?)
+(spec/def ::result
+  (spec/keys :req-un [::content ::title]))
+
+(spec/def ::results
+  (spec/or :empty empty? :populated (spec/coll-of ::result)))
+
+(spec/def ::cql-search-good
+  (spec/keys
+   :req-un [::results ::size]))
+
+(spec/def ::cql-search
+  (spec/or :good ::cql-search-good :error ::cql-search-error))
