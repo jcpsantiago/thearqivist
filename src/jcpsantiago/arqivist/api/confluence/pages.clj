@@ -167,12 +167,13 @@
         [:span {:style "color: rgb(151,160,175);"} "The End"]])))))
 
 (defn create-content-body
-  [{:keys [channel-name]} page-html]
+  [{:keys [channel-name]} title parent-id page-html]
   {:type "page"
-   :title channel-name
+   :title title
    ;; FIXME: should the space key be part of the job object?
    ;; it must be in sync with whatever we set in the create-space! fn at onboarding
    ;; meaning it's a critical assumption that can go wrong if we change things
+   :ancestors (if parent-id [{:id parent-id}] [])
    :space {:key "SLCKARQVST"}
    :body {:storage {:value page-html :representation "storage"}}
    :metadata
@@ -198,24 +199,26 @@
    :version {:number 1}})
 
 (defn create-content!
-  [job credentials page-html]
+  [job credentials title parent-id page-html]
   (let [{:keys [atlassian_tenants/key
                 atlassian_tenants/shared_secret
                 atlassian_tenants/base_url]} credentials
         canonical-url "/rest/api/content"
         jwt-token (utils/atlassian-jwt key shared_secret "POST" canonical-url)
-        body (create-content-body job page-html)
+        body (create-content-body job title parent-id page-html)
         res @(http/post
               (str base_url canonical-url)
               (utils/opts-with-jwt
                jwt-token
                {:body (json/write-value-as-string body)}))]
     (if (= 200 (:status res))
-      (let [page-uri (-> res :body (json/read-value json/keyword-keys-object-mapper) :_links :webui)]
+      (let [parsed-body (-> res :body (json/read-value json/keyword-keys-object-mapper))
+            page-uri (-> parsed-body :_links :webui)
+            page-id (:id parsed-body)]
         (mulog/log ::create-confluence-page
                    :success :true
                    :local-time (java.time.LocalDateTime/now))
-        {:archive-url (str base_url page-uri)})
+        {:page-id page-id :archive-url (str base_url page-uri)})
       (do
         (mulog/log ::create-confluence-page
                    :success :false
