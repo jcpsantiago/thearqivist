@@ -31,11 +31,21 @@
 
 ;; Parent page -------------------------------------------------------------
 (defn parent-page
-  []
+  "
+  Creates an HTML string for the parent page. This page aggregates links to all the children
+  pages containing the individual archives for a specific channel.
+  Takes a job as input
+  "
+  [{:keys [channel-name]}]
   (str
    (html
     (list
      (warning-header)
+     [:p
+      (str "This page aggregates all the archives for " channel-name ".")
+      "Follow the links below for quick access to a specific archive."]
+
+     [:p "The links have the format" [:code "<timestamp of the earliest message> — <timestamp of the latest message>"] "."]
      ;; Children display macro, updates a table of contents automatically as we add more child pages
      ;; see docs in https://confluence.atlassian.com/conf59/children-display-macro-792499081.html
      [:ac:structured-macro
