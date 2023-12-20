@@ -7,7 +7,8 @@
    [buddy.core.hash :refer [sha256]]
    [buddy.sign.jwt :as jwt]
    [clojure.string :as string]
-   [org.httpkit.client :as httpkit]
+   [com.brunobonacci.mulog :as mulog]
+   [org.httpkit.client :as httpkit-client]
    [java-time.api :as java-time]
    [jsonista.core :as jsonista]
    [ring.util.codec :refer [url-encode]]))
@@ -79,9 +80,6 @@
    (merge
     {:headers
      {"Content-Type" "application/json; charset=utf-8"
-      ;; TODO: review why we need this, and document it.
-      ;; I used this in the previous iteration after a lot of trial and error
-      ;; "X-Atlassian-Token" "no-check"
       "Authorization" (str "JWT " jwt-token)}}
     opts)))
 
@@ -94,7 +92,7 @@
   (let [canonical-url "/rest/api/space"
         base-url (:baseUrl lifecycle-payload)
         jwt-token (atlassian-jwt descriptor-key shared_secret "GET" canonical-url)]
-    (httpkit/get
+    (httpkit-client/get
      (str base-url canonical-url)
      (opts-with-jwt jwt-token))))
 
@@ -135,7 +133,7 @@
   (let [canonical-url "/rest/api/space"
         base-url (:baseUrl lifecycle-payload)
         jwt-token (atlassian-jwt descriptor-key shared_secret "POST" canonical-url)]
-    (httpkit/post
+    (httpkit-client/post
      (str base-url canonical-url)
      (opts-with-jwt jwt-token {:body (jsonista/write-value-as-string
                                       ;; NOTE: for now we're hardcoding this, not sure if users will care about
@@ -187,3 +185,21 @@
   {:objectName (name k)
    :alias (str "arqivist_" (name k))
    :type "string"})
+
+(defn search-with-cql!
+  "
+  Searches Confluence using a CQL query.
+  See docs in https://developer.atlassian.com/server/confluence/advanced-searching-using-cql/
+  Responds with the parsed response body.
+  "
+  [base-url shared-secret k v]
+  (mulog/log ::searching-confluence-with-cql
+             :base-url base-url
+             :search-key k)
+  (let [canonical-url "/rest/api/content/search"
+        params (str "cql=" k "%3D" v)
+        jwt-token (atlassian-jwt shared-secret "GET" canonical-url params)
+        cql-response @(httpkit-client/get (str base-url canonical-url)
+                                          (opts-with-jwt jwt-token {:query-params {:cql (str k "=" v)}}))
+        cql-body (-> cql-response :body (jsonista/read-value jsonista/keyword-keys-object-mapper))]
+    cql-body))
