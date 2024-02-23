@@ -54,7 +54,7 @@
   {:extra-paths ["dev" "test"]
    :extra-deps
    {djblue/portal                {:mvn/version "0.51.0"}
-    org.clojure/tools.namespace  {:mvn/version "1.4.4"}}}
+    org.clojure/tools.namespace  {:mvn/version "1.5.0"}}}
 
   ;; Add libraries and paths to support additional test tools
   :test/env
