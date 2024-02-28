@@ -25,7 +25,7 @@
   The `job` hash-map contains information about the :target, which
   is used to select which method to use.
   "
-  (fn [job _ _ _] (:jobs/target job)))
+  (fn [job _ _ _ _] (:jobs/target job)))
 
 (defn parse-messages-and-create-page
   "
@@ -33,50 +33,73 @@
   "
   [job messages parent-id slack-connection confluence-credentials]
   (let [;; NOTE: Title renders as "YYYY-MM-DD HH:MM — YYYY-MM-DD HH:MM"
+        latest-timestamp (max-key :ts messages)
+        timezone (:jobs/timezone job)
         title (str
                (core-utils/slack-ts->datetime
                 (min-key :ts messages)
-                (:jobs/timezone job))
+                timezone)
                "—"
                (core-utils/slack-ts->datetime
-                (max-key :ts messages)
-                (:jobs/timezone job)))
+                latest-timestamp
+                timezone))
         page-rows (->> messages
                        (pmap #(parsers/parse-message job slack-connection %))
                        (sort-by :ts #(compare %2 %1))
-                       (map confluence-pages/page-row))]
+                       (map confluence-pages/page-row))
+        metadata-kvm {:arqivist_slack_thread_last_message_ts latest-timestamp
+                      :arqivist_slack_channel_id (:jobs/slack_channel_id job)}
+        page-attributes {:metadata-kvm metadata-kvm
+                         :title title}]
     (->> page-rows
          (confluence-pages/archival-page job)
-         (confluence-pages/create-content! job title parent-id confluence-credentials))))
+         (confluence-pages/create-content-body job parent-id page-attributes)
+         (confluence-pages/create-content! confluence-credentials))))
 
 (defmethod archive! "confluence"
-  [job slack-connection confluence-credentials messages]
-  (let [{:keys [base_url shared_secret]} confluence-credentials
-        {:keys [slack_channel_id]} job
-        cql-response (confluence-utils/search-with-cql!
-                      base_url shared_secret "slack_channel_id" slack_channel_id)
-        [[response-type response]] (spec/conform ::confluence-specs/cql-search cql-response)
-        parent-page (filter #(= (:channel-name job) %) (:results response))
-        parent-id (get-in (first parent-page) [:content :id])]
+  [job system slack-connection confluence-credentials messages]
+  (mulog/log ::archive!
+             :job job)
+  (try
+    (let [{:keys [:atlassian_tenants/base_url :atlassian_tenants/shared_secret]} confluence-credentials
+          {:keys [:jobs/slack_channel_id]} job
+          atlassian-env (:atlassian-env system)
+          cql-response (confluence-utils/search-with-cql!
+                        base_url shared_secret (:descriptor-key atlassian-env) "arqivist_parent_slack_channel_id" (str "parent_" slack_channel_id))
+          [response-type response] (spec/conform ::confluence-specs/cql-search cql-response)
+          [results-type results] (:results response)]
+      (cond
+        (and (= :good response-type) (= :empty results-type))
+        ;; TODO: make the metadata literal into fn and reuse it where necessary
+        (let [metadata-kvm {:arqivist_parent_slack_channel_id (str "parent_" slack_channel_id)}
+              page-attributes {:metadata-kvm metadata-kvm
+                               :title (:channel-name job)}
+              {:keys [page-id]}
+              (->> job
+                   (confluence-pages/parent-page)
+                   (confluence-pages/create-content-body job nil page-attributes)
+                   (confluence-pages/create-content! confluence-credentials))]
+          ;; TODO: add log
+          (parse-messages-and-create-page job messages page-id slack-connection confluence-credentials))
 
-    (cond
-      (and (= :good response-type) (= 0 (:size response)))
-      (let [{:keys [page-id]} (-> job
-                                  (confluence-pages/parent-page)
-                                  (confluence-pages/create-content!
-                                   job (:channel-name job) nil confluence-credentials))]
-        (parse-messages-and-create-page job messages page-id slack-connection confluence-credentials))
+        (and (= :good response-type) (= :populated results-type))
+        (let [parent-id (get-in (first results) [:content :id])]
+         ;; TODO: add log
+          (parse-messages-and-create-page
+           job messages parent-id slack-connection confluence-credentials))
 
-      (and (= :good response-type) (> 1 (:size response)))
-      (parse-messages-and-create-page job messages parent-id slack-connection confluence-credentials)
-
-      (= :error response-type)
-      (do
-        (mulog/log ::archive-confluence
-                   :success :false
-                   :message "Failed to search Confluence with CQL"
-                   :error (:message response))
-        response))))
+        (= :error response-type)
+        (do
+          (mulog/log ::archive-confluence
+                     :success :false
+                     :message "Failed to search Confluence with CQL"
+                     :error (:message response))
+          response)))
+    (catch Exception e
+      (mulog/log ::archive-confluence
+                 :success :false
+                 :error (.getMessage e)
+                 :exception e))))
 
 (defn due-date
   "
@@ -116,7 +139,7 @@
     (if (seq channel-name)
       ;; TODO: create a spec for a uniform response format for archive!
       (let [archival-response (-> (assoc job :channel-name channel-name)
-                                  (archive! slack-connection target-credentials messages))]
+                                  (archive! system slack-connection target-credentials messages))]
         (if (contains? archival-response :archive-url)
           (do
             (let [frequency (:jobs/frequency job)
@@ -130,7 +153,7 @@
                            (inc (:jobs/n_runs job)))
                   updates {:jobs/target_url (:archive-url archival-response)
                            :jobs/frequency frequency
-                           ;; FIXME: n_runs can't be null, inc explodes, check beforehand
+                           ;; NOTE: n_runs can't be null, inc explodes, check beforehand
                            :jobs/n_runs n-runs
                            :jobs/last_slack_conversation_ts last-ts
                            :jobs/last_slack_conversation_datetime last-datetime
