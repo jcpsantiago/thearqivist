@@ -32,29 +32,40 @@
   Function orchestrating the creation of Confluence pages.
   "
   [job messages parent-id slack-connection confluence-credentials]
-  (let [;; NOTE: Title renders as "YYYY-MM-DD HH:MM — YYYY-MM-DD HH:MM"
-        latest-timestamp (max-key :ts messages)
-        timezone (:jobs/timezone job)
-        title (str
-               (core-utils/slack-ts->datetime
-                (min-key :ts messages)
-                timezone)
-               "—"
-               (core-utils/slack-ts->datetime
-                latest-timestamp
-                timezone))
-        page-rows (->> messages
-                       (pmap #(parsers/parse-message job slack-connection %))
-                       (sort-by :ts #(compare %2 %1))
-                       (map confluence-pages/page-row))
-        metadata-kvm {:arqivist_slack_thread_last_message_ts latest-timestamp
-                      :arqivist_slack_channel_id (:jobs/slack_channel_id job)}
-        page-attributes {:metadata-kvm metadata-kvm
-                         :title title}]
-    (->> page-rows
-         (confluence-pages/archival-page job)
-         (confluence-pages/create-content-body job parent-id page-attributes)
-         (confluence-pages/create-content! confluence-credentials))))
+  (let [int-timestamps (map #(-> (:ts %)
+                                 (string/replace #"\..+" "")
+                                 (parse-long))
+                            messages)
+        first-timestamp (apply min int-timestamps)
+        latest-timestamp (apply max int-timestamps)]
+    (mulog/log ::parse-and-create
+               :job job
+               :messages messages
+               :first-ts first-timestamp
+               :latest-ts latest-timestamp
+               :parent-id parent-id)
+    (let [;; NOTE: Title renders as "YYYY-MM-DD HH:MM — YYYY-MM-DD HH:MM"
+          timezone (:jobs/timezone job)
+          title (str
+                 (core-utils/ts->datetime
+                  first-timestamp
+                  timezone)
+                 "—"
+                 (core-utils/ts->datetime
+                  latest-timestamp
+                  timezone))
+          page-rows (->> messages
+                         (pmap #(parsers/parse-message job slack-connection %))
+                         (sort-by :ts #(compare %2 %1))
+                         (map confluence-pages/page-row))
+          metadata-kvm {:arqivist_slack_thread_last_message_ts latest-timestamp
+                        :arqivist_slack_channel_id (:jobs/slack_channel_id job)}
+          page-attributes {:metadata-kvm metadata-kvm
+                           :title title}]
+      (->> page-rows
+           (confluence-pages/archival-page job)
+           (confluence-pages/create-content-body job parent-id page-attributes)
+           (confluence-pages/create-content! confluence-credentials)))))
 
 (defmethod archive! "confluence"
   [job system slack-connection confluence-credentials messages]

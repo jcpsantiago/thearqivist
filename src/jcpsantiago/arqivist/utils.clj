@@ -12,19 +12,19 @@
 (defn ts->datetime
   "Convert a UNIX timestamp into a java instant."
   [ts tz]
-  (let [epoch-seconds (Long/parseLong ts)
+  (let [formatter (java.time.format.DateTimeFormatter/ofPattern "yyyy-MM-dd HH:mm:ss")
         zone (java.time.ZoneId/of tz)]
-    (-> epoch-seconds
+    (-> ts
         java.time.Instant/ofEpochSecond
-        (.atZone zone))))
+        (.atZone zone)
+        (.format formatter))))
 
 (defn slack-ts->datetime
   [ts tz]
-  (let [formatter (java.time.format.DateTimeFormatter/ofPattern "yyyy-MM-dd HH:mm:ss")
-        datetime (-> ts
+  (let [datetime (-> ts
                      (string/replace #"\..+" "")
-                     (ts->datetime tz)
-                     (.format formatter))]
+                     (parse-long)
+                     (ts->datetime tz))]
     datetime))
 
 ;; Messaging with the user
