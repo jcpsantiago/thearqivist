@@ -3,6 +3,7 @@
   (:require
    [clj-slack.chat :as slack-chat]
    [clj-slack.users :as slack-users]
+   [clojure.string :as string]
    [clojure.spec.alpha :as spec]
    [com.brunobonacci.mulog :as mulog]
    [jcpsantiago.arqivist.specs :as core-specs]
@@ -11,11 +12,20 @@
 (defn ts->datetime
   "Convert a UNIX timestamp into a java instant."
   [ts tz]
-  (let [epoch-seconds (Long/parseLong ts)
+  (let [formatter (java.time.format.DateTimeFormatter/ofPattern "yyyy-MM-dd HH:mm:ss")
         zone (java.time.ZoneId/of tz)]
-    (-> epoch-seconds
+    (-> ts
         java.time.Instant/ofEpochSecond
-        (.atZone zone))))
+        (.atZone zone)
+        (.format formatter))))
+
+(defn slack-ts->datetime
+  [ts tz]
+  (let [datetime (-> ts
+                     (string/replace #"\..+" "")
+                     (parse-long)
+                     (ts->datetime tz))]
+    datetime))
 
 ;; Messaging with the user
 (defn error-response-text

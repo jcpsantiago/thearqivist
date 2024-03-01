@@ -7,7 +7,8 @@
    [buddy.core.hash :refer [sha256]]
    [buddy.sign.jwt :as jwt]
    [clojure.string :as string]
-   [org.httpkit.client :as httpkit]
+   [com.brunobonacci.mulog :as mulog]
+   [org.httpkit.client :as httpkit-client]
    [java-time.api :as java-time]
    [jsonista.core :as jsonista]
    [ring.util.codec :refer [url-encode]]))
@@ -24,22 +25,25 @@
   "
   [canonical-method canonical-uri parameters]
   ;; according to docs the JWT parameter is ignored if present
-  (let [no-jwt (dissoc parameters :jwt)]
-    (str
-     canonical-method "&"
-     canonical-uri "&"
-     (when parameters
-       (->> no-jwt
-            ;; the query parameters must be sorted in ascending order
-            (sort-by first)
-            ;; both keys and values must be url (percent) encoded
-            (map (fn [[k v]]
-                   (str
-                    (-> k name url-encode)
-                    "="
-                    (-> v str url-encode))))
-            (interpose "&")
-            (apply str))))))
+  (let [no-jwt (dissoc parameters :jwt)
+        query-string (str
+                      canonical-method "&"
+                      canonical-uri "&"
+                      (when parameters
+                        (->> no-jwt
+                             ;; the query parameters must be sorted in ascending order
+                             (sort-by first)
+                             ;; both keys and values must be url (percent) encoded
+                             (map (fn [[k v]]
+                                    (str
+                                     (-> k name url-encode)
+                                     "="
+                                     (-> v str url-encode))))
+                             (interpose "&")
+                             (apply str))))]
+    (mulog/log ::canonical-string
+               :query-string query-string)
+    query-string))
 
 (defn atlassian-query-string-hash
   "
@@ -79,9 +83,6 @@
    (merge
     {:headers
      {"Content-Type" "application/json; charset=utf-8"
-      ;; TODO: review why we need this, and document it.
-      ;; I used this in the previous iteration after a lot of trial and error
-      ;; "X-Atlassian-Token" "no-check"
       "Authorization" (str "JWT " jwt-token)}}
     opts)))
 
@@ -94,7 +95,7 @@
   (let [canonical-url "/rest/api/space"
         base-url (:baseUrl lifecycle-payload)
         jwt-token (atlassian-jwt descriptor-key shared_secret "GET" canonical-url)]
-    (httpkit/get
+    (httpkit-client/get
      (str base-url canonical-url)
      (opts-with-jwt jwt-token))))
 
@@ -121,7 +122,8 @@
         false)
 
       ;; In case the call fails (non 200 status), for some reason. Really edge-casey here.
-      (throw (Exception. "Couldn't get spaces from Confluence. Body: " (:body space-res))))))
+      (throw (ex-info "Couldn't get spaces from Confluence."
+                      {:get-spaces-res (:body space-res)})))))
 
 (defn create-space!
   "
@@ -135,7 +137,7 @@
   (let [canonical-url "/rest/api/space"
         base-url (:baseUrl lifecycle-payload)
         jwt-token (atlassian-jwt descriptor-key shared_secret "POST" canonical-url)]
-    (httpkit/post
+    (httpkit-client/post
      (str base-url canonical-url)
      (opts-with-jwt jwt-token {:body (jsonista/write-value-as-string
                                       ;; NOTE: for now we're hardcoding this, not sure if users will care about
@@ -169,13 +171,14 @@
 (defn content-properties-ks
   "
   List of content properties we want to save in the Confluence page's storage.
-  These can be thought of as key-value storage, and act as a our database.
+  These can be thought of as key-value storage, and act as our database.
   "
   []
   [:slack_thread_ts
    :slack_thread_creator
    :slack_thread_n_messages
    :slack_thread_last_message_ts
+   :parent_slack_channel_id
    :slack_channel_id])
 
 (defn content-properties-extraction
@@ -187,3 +190,30 @@
   {:objectName (name k)
    :alias (str "arqivist_" (name k))
    :type "string"})
+
+(defn search-with-cql!
+  "
+  Searches Confluence using a CQL query.
+  See docs in https://developer.atlassian.com/server/confluence/advanced-searching-using-cql/
+  Responds with the parsed response body.
+  "
+  [base-url shared-secret descriptor-key k v]
+  (let [canonical-url "/rest/api/content/search"
+        params {:cql (str k "=" v)}
+        jwt-token (atlassian-jwt descriptor-key shared-secret "GET" canonical-url params)
+        cql-response @(httpkit-client/get
+                       (str base-url canonical-url)
+                       (opts-with-jwt jwt-token {:query-params params}))
+        cql-body (-> cql-response
+                     :body
+                     (jsonista/read-value jsonista/keyword-keys-object-mapper))]
+    (mulog/log ::search-with-cql
+               :secret shared-secret
+               :params params
+               :jwt jwt-token
+               :base-url base-url
+               :canonical-url canonical-url
+               :descriptor-key descriptor-key
+               :response cql-response
+               :response-body cql-body)
+    cql-body))
