@@ -168,39 +168,40 @@
 
 (defn create-content-body
   [_job parent-id {:keys [title metadata-kvm]} page-html]
-  {:type "page"
-   :title title
-   ;; FIXME: should the space key be part of the job object?
-   ;; it must be in sync with whatever we set in the create-space! fn at onboarding
-   ;; meaning it's a critical assumption that can go wrong if we change things
-   :ancestors (if parent-id [{:id parent-id}] [])
-   :space {:key "SLCKARQVST"}
-   :body {:storage {:value page-html :representation "storage"}}
-   :metadata
-   {:properties
-    ;; NOTE: if the properties below are not explicitly set,
-    ;; confluence creates a full-width page which looks ugly
-    {:editor
-     {:key "editor"
-      ;; NOTE: the :version :number is how confluence keeps track of changes
-      ;; the :value is for human consumption. This never changes though, thus hardcoded.
-      :version {:number 1}
-      :value "v2"}
-     :content-appearance-draft
-     {:key "content-appearance-draft"
-      :version {:number 1}
-      :value "default"}
-     :content-appearance-published
-     {:key "content-appearance-published"
-      :version {:number 1}
-      :value "default"}
-     :slack_arqivist_props
-     {:key "slack_arqivist_props"
-      :version {:number 1}
-      :value metadata-kvm}}}
-   ;; FIXME: version must be different on each update.
-   ;; should we use a unix timestamp to simplify?
-   :version {:number 1}})
+  (merge
+   {:type "page"
+    :title title
+    ;; FIXME: should the space key be part of the job object?
+    ;; it must be in sync with whatever we set in the create-space! fn at onboarding
+    ;; meaning it's a critical assumption that can go wrong if we change things
+    :space {:key "SLCKARQVST"}
+    :body {:storage {:value page-html :representation "storage"}}
+    :metadata
+    {:properties
+     ;; NOTE: if the properties below are not explicitly set,
+     ;; confluence creates a full-width page which looks ugly
+     {:editor
+      {:key "editor"
+       ;; NOTE: the :version :number is how confluence keeps track of changes
+       ;; the :value is for human consumption. This never changes though, thus hardcoded.
+       :version {:number 1}
+       :value "v2"}
+      :content-appearance-draft
+      {:key "content-appearance-draft"
+       :version {:number 1}
+       :value "default"}
+      :content-appearance-published
+      {:key "content-appearance-published"
+       :version {:number 1}
+       :value "default"}
+      :slack_arqivist_props
+      {:key "slack_arqivist_props"
+       :version {:number 1}
+       :value metadata-kvm}}}
+    ;; FIXME: version must be different on each update.
+    ;; should we use a unix timestamp to simplify?
+    :version {:number 1}}
+   (when parent-id {:ancestors [{:id parent-id}]})))
 
 (defn create-content!
   "

@@ -47,13 +47,9 @@
     (let [;; NOTE: Title renders as "YYYY-MM-DD HH:MM — YYYY-MM-DD HH:MM"
           timezone (:jobs/timezone job)
           title (str
-                 (core-utils/ts->datetime
-                  first-timestamp
-                  timezone)
+                 (core-utils/ts->datetime first-timestamp timezone)
                  "—"
-                 (core-utils/ts->datetime
-                  latest-timestamp
-                  timezone))
+                 (core-utils/ts->datetime latest-timestamp timezone))
           page-rows (->> messages
                          (pmap #(parsers/parse-message job slack-connection %))
                          (sort-by :ts #(compare %2 %1))
@@ -84,13 +80,14 @@
         ;; TODO: make the metadata literal into fn and reuse it where necessary
         (let [metadata-kvm {:arqivist_parent_slack_channel_id (str "parent_" slack_channel_id)}
               page-attributes {:metadata-kvm metadata-kvm
-                               :title (:channel-name job)}
+                               :title (str "# " (:channel-name job))}
               {:keys [page-id]}
               (->> job
                    (confluence-pages/parent-page)
                    (confluence-pages/create-content-body job nil page-attributes)
                    (confluence-pages/create-content! confluence-credentials))]
           ;; TODO: add log
+          ;; TODO: send ephemeral in case the parent already exists, but has no children
           (parse-messages-and-create-page job messages page-id slack-connection confluence-credentials))
 
         (and (= :good response-type) (= :populated results-type))
@@ -154,11 +151,12 @@
         (if (contains? archival-response :archive-url)
           (do
             (let [frequency (:jobs/frequency job)
-                  last-ts (->> messages (sort-by :ts) last :ts)
-                  last-datetime (-> last-ts
+                  latest-ts (->> messages (sort-by :ts) last :ts)
+                  latest-unixts (-> latest-ts
                                     (string/replace #"\..+" "")
-                                    (Long/parseLong)
-                                    (java.time.Instant/ofEpochSecond))
+                                    (parse-long))
+                  latest-datetime (-> latest-unixts
+                                      (java.time.Instant/ofEpochSecond))
                   n-runs (if (nil? (:jobs/n_runs job))
                            1
                            (inc (:jobs/n_runs job)))
@@ -166,8 +164,9 @@
                            :jobs/frequency frequency
                            ;; NOTE: n_runs can't be null, inc explodes, check beforehand
                            :jobs/n_runs n-runs
-                           :jobs/last_slack_conversation_ts last-ts
-                           :jobs/last_slack_conversation_datetime last-datetime
+                           :jobs/latest_slack_conversation_unixts latest-unixts
+                           :jobs/latest_slack_conversation_ts latest-ts
+                           :jobs/latest_slack_conversation_datetime latest-datetime
                            :jobs/due_date (due-date frequency)
                            :jobs/updated_at (java-time/local-date-time)}]
 
