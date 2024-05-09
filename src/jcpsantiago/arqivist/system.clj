@@ -4,12 +4,12 @@
   (:require
    [com.brunobonacci.mulog :as mulog]
    [donut.system :as donut]
-   [hikari-cp.core :as hikari]
    [org.httpkit.client :as http-client]
    [org.httpkit.server :as http-server]
    [jcpsantiago.arqivist.router :as router]
    [jsonista.core :as jsonista]
-   [migratus.core :as migratus]))
+   [migratus.core :as migratus]
+   [next.jdbc :as jdbc]))
 
 ;; TODO: move into system utils namespace?
 (defn ngrok-tunnel-url
@@ -48,7 +48,7 @@
                     (try
                       (migratus/migrate creds)
                       (catch
-                       org.postgresql.util.PSQLException e
+                       Exception e
                         (mulog/log ::connecting-db-failed
                                    :error-message (ex-message e)
                                    :error-data (ex-data e)))))
@@ -58,21 +58,27 @@
                             :db {:datasource (donut/ref [:db :db-connection])}}}})
 
 (def db-connection
-  "Database connection component.
-   Uses HikariCP to create and manage a connection pool."
+  "Database connection component."
   #::donut{:start (fn create-db-connection
-                    [{{:keys [options]} ::donut/config}]
+                    [{{:keys [db-spec]} ::donut/config}]
                     (mulog/log ::creating-db-connection
+                               :db-spec db-spec
                                :local-time (java.time.LocalDateTime/now))
-                    (hikari/make-datasource options))
+                    (let [db-connection (jdbc/get-datasource db-spec)]
+                      ;; NOTE: https://kerkour.com/sqlite-for-servers
+                      (jdbc/execute! db-connection ["PRAGMA journal_mode = WAL;"])
+                      (jdbc/execute! db-connection ["PRAGMA synchronous = NORMAL;"])
+                      (jdbc/execute! db-connection ["PRAGMA cache_size = 1000000000;"])
+                      (jdbc/execute! db-connection ["PRAGMA foreign_keys = true;"])
+                      (jdbc/execute! db-connection ["PRAGMA temp_store = memory;"])
+                      db-connection))
 
            :stop (fn closing-db-connection
-                   [{::donut/keys [instance]}]
+                   [{::donut/keys [_instance]}]
                    (mulog/log ::closing-db-connection
-                              :local-time (java.time.LocalDateTime/now))
-                   (hikari/close-datasource instance))
+                              :local-time (java.time.LocalDateTime/now)))
 
-           :config {:options (donut/ref [:env :datasource-options])}})
+           :config {:db-spec {:dbtype "sqlite" :dbname "thearqivist_db"}}})
 
 (def http-server
   "Webserver component using http-kit"
@@ -129,15 +135,7 @@
 
             :port (parse-long (or (System/getenv "PORT")
                                   (System/getenv "ARQIVIST_PORT")
-                                  "8989"))
-
-            :datasource-options {;; NOTE: No idea what each of these actually do, should learn :D
-                                 :maximum-pool-size 5
-                                 :minimum-idle 2
-                                 :idle-timeout 12000
-                                 :max-lifetime 300000
-                                 :jdbc-url (or (System/getenv "DATABASE_URL")
-                                               "jdbc:postgresql://localhost/arqivist?user=arqivist&password=arqivist")}}
+                                  "8989"))}
 
       ;; Event logger
       :event-log {:publisher event-logger}

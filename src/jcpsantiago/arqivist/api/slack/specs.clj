@@ -187,7 +187,7 @@
 (spec/def :slack_teams/scopes string?)
 (spec/def :slack_teams/access_token string?)
 (spec/def :slack_teams/bot_user_id string?)
-(spec/def :slack_teams/created_at inst?)
+(spec/def :slack_teams/created_at int?)
 (spec/def :slack_teams/atlassian_tenant_id pos-int?)
 
 (spec/def ::team-attributes

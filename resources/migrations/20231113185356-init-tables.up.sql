@@ -1,54 +1,54 @@
 CREATE TABLE
   IF NOT EXISTS atlassian_tenants (
-    id serial primary key,
-    key varchar(255),
-    tenant_name varchar(255),
-    account_id varchar(255),
-    client_key varchar(255),
-    shared_secret varchar(255),
-    base_url varchar(255),
-    base_url_short varchar(255),
-    display_url varchar(255),
-    product_type varchar(255),
-    description varchar(255),
-    service_entitlement_number varchar(255),
-    oauth_client_id varchar(255),
-    valid_license boolean,
-    is_evaluation boolean,
-    created_at timestamp default current_timestamp
-  );
+    id integer primary key autoincrement,
+    key text,
+    tenant_name text,
+    account_id text,
+    client_key text,
+    shared_secret text,
+    base_url text,
+    base_url_short text,
+    display_url text,
+    product_type text,
+    description text,
+    service_entitlement_number text,
+    oauth_client_id text,
+    valid_license integer,
+    is_evaluation integer,
+    created_at integer default (unixepoch('now'))
+  ) STRICT;
 
 --;;
 CREATE TABLE
   IF NOT EXISTS slack_teams (
-    id serial primary key,
-    atlassian_tenant_id int REFERENCES atlassian_tenants ON DELETE CASCADE,
-    app_id varchar(255),
-    external_team_id varchar(255),
-    team_name varchar(255),
-    registering_user varchar(255),
-    scopes varchar(255),
-    access_token varchar(255),
-    bot_user_id varchar(255),
-    created_at timestamp default current_timestamp
-  );
+    id integer primary key autoincrement,
+    atlassian_tenant_id integer REFERENCES atlassian_tenants ON DELETE CASCADE,
+    app_id text,
+    external_team_id text,
+    team_name text,
+    registering_user text,
+    scopes text,
+    access_token text,
+    bot_user_id text,
+    created_at integer default (unixepoch('now'))
+  ) STRICT;
 
 --;;
 CREATE TABLE
   IF NOT EXISTS jobs (
-    id serial primary key,
-    slack_team_id int NOT NULL REFERENCES slack_teams ON DELETE CASCADE,
-    slack_channel_id varchar(255) NOT NULL,
-    owner_slack_user_id varchar(255) NOT NULL,
-    timezone varchar(255) NOT NULL,
-    frequency varchar(255) NOT NULL,
-    target varchar(255) NOT NULL,
-    target_url varchar(255),
-    last_slack_conversation_datetime timestamp,
-    last_slack_conversation_ts varchar(255),
-    due_date timestamp,
-    n_runs int,
-    updated_at timestamp,
-    created_at timestamp default current_timestamp,
+    id integer primary key autoincrement,
+    slack_team_id integer NOT NULL REFERENCES slack_teams ON DELETE CASCADE,
+    slack_channel_id text NOT NULL,
+    owner_slack_user_id text NOT NULL,
+    timezone text NOT NULL,
+    frequency text NOT NULL,
+    target text NOT NULL,
+    target_url text,
+    last_slack_conversation_datetime integer,
+    last_slack_conversation_ts text,
+    due_date integer,
+    n_runs integer,
+    updated_at integer,
+    created_at integer default (unixepoch('now')),
     CHECK (frequency in ('once', 'daily', 'weekly'))
-  );
+  ) STRICT;
