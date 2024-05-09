@@ -319,4 +319,3 @@
            [:a {:href "https://arqivist.app", :target "_blank"}
             "The Arqivist"]
            " is made with ♥  in Berlin."]]]]]])))
-

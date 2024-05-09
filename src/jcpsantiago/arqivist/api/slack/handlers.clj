@@ -7,19 +7,16 @@
    [clojure.spec.alpha :as spec]
    [clojure.string :refer [trim]]
    [com.brunobonacci.mulog :as mulog]
-   [jcpsantiago.arqivist.api.slack.ui-blocks :as ui]
    [jcpsantiago.arqivist.api.slack.pages :as pages]
    [jcpsantiago.arqivist.api.slack.specs :as specs]
+   [jcpsantiago.arqivist.api.slack.ui-blocks :as ui]
    [jcpsantiago.arqivist.api.slack.utils :as utils]
    [jcpsantiago.arqivist.messages :as messages]
-   [jcpsantiago.arqivist.utils :as core-utils]
    [jcpsantiago.arqivist.specs :as core-specs]
+   [jcpsantiago.arqivist.utils :as core-utils]
    [jsonista.core :as json]
    [next.jdbc.sql :as sql]
-   ;; needed because PostgreSQL can't translate java datetime into SQL timestamp
-   ;; https://cljdoc.org/d/com.github.seancorfield/next.jdbc/1.3.894/api/next.jdbc.date-time
-   [next.jdbc.date-time]
-   [ring.util.response :refer [bad-request response content-type]]))
+   [ring.util.response :refer [bad-request content-type response]]))
 
 ;;
 ;; ------------------------------------------------------

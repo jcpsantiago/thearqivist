@@ -6,6 +6,7 @@
    [clojure.string :as string]
    [clojure.spec.alpha :as spec]
    [com.brunobonacci.mulog :as mulog]
+   [java-time.api :as java-time]
    [jcpsantiago.arqivist.specs :as core-specs]
    [next.jdbc.sql :as sql]))
 
@@ -26,6 +27,14 @@
                      (parse-long)
                      (ts->datetime tz))]
     datetime))
+
+(defn unix-epoch
+  []
+  (quot (System/currentTimeMillis) 1000))
+
+(defn to-seconds-from-epoch
+  [epoch]
+  (quot (java-time/to-millis-from-epoch epoch) 1000))
 
 ;; Messaging with the user
 (defn error-response-text
@@ -71,7 +80,7 @@
                                 :radio_buttons-action :selected_option :value])
         job-map {:jobs/target "confluence" :jobs/frequency frequency
                  :jobs/slack_team_id slack-team-id :jobs/slack_channel_id channel_id
-                 :jobs/owner_slack_user_id user_id :jobs/timezone tz :jobs/created_at (java.time.Instant/now)}
+                 :jobs/owner_slack_user_id user_id :jobs/timezone tz :jobs/created_at (quot (System/currentTimeMillis) 1000)}
         job (spec/conform ::core-specs/job job-map)]
 
     (if (spec/invalid? job)
@@ -136,4 +145,3 @@
                  :error-message (ex-message e)
                  :local-time (java.time.LocalDateTime/now))
       (throw (ex-info "Failed to insert job in database" e)))))
-
