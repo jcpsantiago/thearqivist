@@ -131,56 +131,56 @@
 
         ;; TODO: add more non PII details to context
         (mulog/with-context {:slack-team-id team_id}
-          (cond
-            (and (spec/valid? ::specs/team-attributes slack-team-attributes)
-                 (seq (:token slack-connection)))
-            (do
-              (mulog/log ::add-slack-team-attributes
-                         :success :true
-                         :local-time (java.time.LocalDateTime/now))
-              (-> request
-                  (assoc :slack-team-attributes slack-team-attributes)
-                  (assoc :slack-connection slack-connection)
-                  handler))
+                            (cond
+                              (and (spec/valid? ::specs/team-attributes slack-team-attributes)
+                                   (seq (:token slack-connection)))
+                              (do
+                                (mulog/log ::add-slack-team-attributes
+                                           :success :true
+                                           :local-time (java.time.LocalDateTime/now))
+                                (-> request
+                                    (assoc :slack-team-attributes slack-team-attributes)
+                                    (assoc :slack-connection slack-connection)
+                                    handler))
 
-            (spec/invalid? slack-team-attributes)
-            (do
-              (mulog/log ::add-slack-team-attributes
-                         :success :false
-                         :message "Slack team attributes did not conform to spec"
+                              (spec/invalid? slack-team-attributes)
+                              (do
+                                (mulog/log ::add-slack-team-attributes
+                                           :success :false
+                                           :message "Slack team attributes did not conform to spec"
                                            ;; FIXME: The explanation will contain the slack access key!
                                            ;; we have to obfuscate that before logging
-                         :explanation (spec/explain-data ::specs/team-attributes slack-team-row)
-                         :request request
-                         :local-time (java.time.LocalDateTime/now))
-              (response (core-utils/error-response-text)))
+                                           :explanation (spec/explain-data ::specs/team-attributes slack-team-row)
+                                           :request request
+                                           :local-time (java.time.LocalDateTime/now))
+                                (response (core-utils/error-response-text)))
 
-            (nil? (:token slack-connection))
-            (do
-              (mulog/log ::add-slack-team-attributes
-                         :success :false
-                         :message "Missing Slack connection token"
-                         :local-time (java.time.LocalDateTime/now))
-              (response (core-utils/error-response-text)))
+                              (nil? (:token slack-connection))
+                              (do
+                                (mulog/log ::add-slack-team-attributes
+                                           :success :false
+                                           :message "Missing Slack connection token"
+                                           :local-time (java.time.LocalDateTime/now))
+                                (response (core-utils/error-response-text)))
 
                               ;; NOTE: edge-case, only became relevant during development
                               ;; it shouldn't be possible to have access to the app
                               ;; without having installed it first
-            (nil? slack-team-row)
-            (do
-              (mulog/log ::add-slack-team-attributes
-                         :success :false
-                         :error "Missing Slack credentials in the db"
-                         :local-time (java.time.LocalDateTime/now))
-              (response (core-utils/error-response-text)))
+                              (nil? slack-team-row)
+                              (do
+                                (mulog/log ::add-slack-team-attributes
+                                           :success :false
+                                           :error "Missing Slack credentials in the db"
+                                           :local-time (java.time.LocalDateTime/now))
+                                (response (core-utils/error-response-text)))
 
-            :else
-            (do
-              (mulog/log ::add-slack-team-attributes
-                         :success :false
-                         :error "Spec does not conform"
-                         :explanation (spec/explain ::specs/team-attributes slack-team-row))
-              (response (core-utils/error-response-text))))))
+                              :else
+                              (do
+                                (mulog/log ::add-slack-team-attributes
+                                           :success :false
+                                           :error "Spec does not conform"
+                                           :explanation (spec/explain ::specs/team-attributes slack-team-row))
+                                (response (core-utils/error-response-text))))))
 
       (catch Exception e
         (mulog/log ::add-slack-team-attributes
@@ -304,12 +304,12 @@
     ;; track the request duration and outcome
     (mulog/trace
      :io.redefine.datawarp/http-request
-      {:pairs [:content-type     (get-in request [:headers "content-type"])
-               :content-encoding (get-in request [:headers "content-encoding"])
-               :middleware       id]
+     {:pairs [:content-type     (get-in request [:headers "content-type"])
+              :content-encoding (get-in request [:headers "content-encoding"])
+              :middleware       id]
       ;; capture http status code from the response
-       :capture (fn [{:keys [status]}] {:http-status status})}
-      (handler request))))
+      :capture (fn [{:keys [status]}] {:http-status status})}
+     (handler request))))
 
 ;; Atlassian middleware -----------------------------------------------------
 (defn verify-atlassian-iframe

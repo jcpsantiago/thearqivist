@@ -41,7 +41,7 @@
     (let [context (mulog/local-context)]
       (future
         (mulog/with-context context
-          (messages/start-job system request job core-utils/persist-job!)))
+                            (messages/start-job system request job core-utils/persist-job!)))
 
       (update-modal-response ui/confirm-job-started-modal request))
 
@@ -64,7 +64,7 @@
 
       (future
         (mulog/with-context (mulog/local-context)
-          (messages/start-job system request updated-job core-utils/update-job!)))
+                            (messages/start-job system request updated-job core-utils/update-job!)))
 
       ;; job started confirmation modal
       (update-modal-response ui/confirm-job-started-modal request))
@@ -105,12 +105,12 @@
 
       (mulog/with-context
        context
-        (mulog/log ::interaction-payload
-                   :local-time (java.time.LocalDateTime/now))
-        (case type
-          "view_submission" (view-submission system request)
-          "message_action" "TODO"
-          (bad-request "Unknown type"))))))
+       (mulog/log ::interaction-payload
+                  :local-time (java.time.LocalDateTime/now))
+       (case type
+         "view_submission" (view-submission system request)
+         "message_action" "TODO"
+         (bad-request "Unknown type"))))))
 
 ;;
 ;; ------------------------------------------------------

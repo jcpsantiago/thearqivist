@@ -56,4 +56,3 @@
       "bombastic"           "https://bombastic.atlassian.net"
       "loop-in-the-burrito" "https://loop-in-the-burrito.atlassian.net"
       "looping-burrito"     "https://looping-burrito.atlassian.net")))
-

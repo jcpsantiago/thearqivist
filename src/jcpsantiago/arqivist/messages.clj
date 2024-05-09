@@ -168,4 +168,3 @@
                    :local-time (java.time.LocalDateTime/now))
         (let [{:keys [channel_id user_id]} (-> request :parameters :form :payload :view :private_metadata read-string)]
           (core-utils/ephemeral-error-message! user_id channel_id (:slack-connection request)))))))
-

@@ -135,4 +135,3 @@
                  :error-message (ex-message e)
                  :local-time (java.time.LocalDateTime/now))
       (throw (ex-info "Failed to insert job in database" e)))))
-

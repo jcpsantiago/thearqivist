@@ -27,4 +27,3 @@
          :jobs/frequency :jobs/target]
    :opt [:jobs/id :jobs/last_slack_conversation_ts :jobs/due_date :jobs/n_runs :jobs/updated_at :jobs/created_at
          :jobs/target_url :jobs/last_slack_conversation_datetime]))
-
