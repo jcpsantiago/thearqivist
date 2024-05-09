@@ -124,18 +124,25 @@
   "
   [job]
   (let [{:keys [:jobs/owner_slack_user_id :jobs/frequency :jobs/due_date
-                :jobs/created_at :jobs/last_slack_conversation_datetime]} job
-        created_at_ts (to-seconds-from-epoch created_at)
-        last-slack-conversation-ts (to-seconds-from-epoch last_slack_conversation_datetime)
-        due_date_ts (to-seconds-from-epoch due_date)]
+                :jobs/created_at :jobs/last_slack_conversation_datetime
+                :jobs/timezone]} job
+        due_date_tz (when due_date
+                      (java-time/local-date-time
+                       (java-time/instant (* 1000 due_date))
+                       "UTC"))
+        last_slack_conversation_tz (java-time/local-date-time
+                                    (java-time/instant (* 1000 last_slack_conversation_datetime))
+                                    timezone)]
     ;; NOTE: Slack does not allow more than 10 fields per block
     ;; each "row" here would be two fields so we can have a max of 5 k-v pairs
     (two-column-section
      [["*Owner*: " (str "<@" owner_slack_user_id ">")]
-      ["*Created at*: " (slack-nice-datetime created_at_ts "{date_num}" created_at)]
+      ["*Created at*: " (slack-nice-datetime created_at "{date_num}" created_at)]
       ["*Frequency*:" (str "`" frequency "`")]
-      ["*Next archival at*:" (slack-nice-datetime due_date_ts "{date_num} 12:00 AM" due_date)]
-      ["*Archived until*:" (slack-nice-datetime last-slack-conversation-ts "{date_num} {time}" last_slack_conversation_datetime)]])))
+      ["*Next archival at*:" (if due_date_tz
+                               (slack-nice-datetime due_date "{date_num}" due_date_tz)
+                               "Not scheduled")]
+      ["*Archived until*:" (slack-nice-datetime last_slack_conversation_datetime "{date_num} {time}" last_slack_conversation_tz)]])))
 
 (defn exists-once-modal
   "
@@ -143,9 +150,11 @@
   "
   [request existing-job]
   (let [{{{:keys [team_domain channel_name channel_id user_id user_name]} :form} :parameters} request
-        {:keys [:jobs/last_slack_conversation_datetime
+        {:keys [:jobs/last_slack_conversation_datetime :jobs/timezone
                 :jobs/slack_channel_id :jobs/target_url]} existing-job
-        last-slack-conversation-ts (quot (java-time/to-millis-from-epoch last_slack_conversation_datetime) 1000)]
+        last_slack_conversation_tz (java-time/local-date-time
+                                    (java-time/instant (* 1000 last_slack_conversation_datetime))
+                                    timezone)]
 
     {:type "modal"
      :callback_id "exists-once-confirmation"
@@ -178,9 +187,9 @@
         :text (str
                "If you would you like to setup a *recurrent archival* instead of a one time manual job, "
                "select another frequency, otherwise please select `once` again. I'll "
-               "create a new archive with messages since "
-               (str "<!date^" last-slack-conversation-ts "^{date_num} {time}|" last_slack_conversation_datetime "> ")
-               "without overwriting the previous archive.")}}
+               "append new messages since "
+               (str "<!date^" last_slack_conversation_datetime "^{date_num} {time}|" last_slack_conversation_tz "> ")
+               "to the archive.")}}
 
       {:type "divider"}
       {:type "input"

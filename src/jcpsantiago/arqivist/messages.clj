@@ -46,8 +46,8 @@
   [frequency]
   (case frequency
     "once" nil
-    "daily"  (java-time/+ (java-time/local-date-time) (java-time/days 1))
-    "weekly" (java-time/+ (java-time/local-date-time) (java-time/weeks 1))))
+    "daily"  (java-time/+ (java-time/instant) (java-time/days 1))
+    "weekly" (java-time/+ (java-time/instant) (java-time/weeks 1))))
 
 ;; TODO:
 ;; * clean up in case it's a first-time run and creating the archive fails
@@ -81,19 +81,20 @@
                   last-ts (->> messages (sort-by :ts) last :ts)
                   last-datetime (-> last-ts
                                     (string/replace #"\..+" "")
-                                    (Long/parseLong)
-                                    (java.time.Instant/ofEpochSecond))
+                                    (Long/parseLong))
                   n-runs (if (nil? (:jobs/n_runs job))
                            1
                            (inc (:jobs/n_runs job)))
+                  job-due-date (due-date frequency)
                   updates {:jobs/target_url (:archive-url archival-response)
                            :jobs/frequency frequency
                            ;; FIXME: n_runs can't be null, inc explodes, check beforehand
                            :jobs/n_runs n-runs
                            :jobs/last_slack_conversation_ts last-ts
                            :jobs/last_slack_conversation_datetime last-datetime
-                           :jobs/due_date (due-date frequency)
-                           :jobs/updated_at (java-time/local-date-time)}]
+                           :jobs/due_date (when job-due-date
+                                            (.getEpochSecond job-due-date))
+                           :jobs/updated_at (core-utils/unix-epoch)}]
 
               (sql/update!
                (:db-connection system)
@@ -141,7 +142,8 @@
           atlassian_tenant_id (get-in request [:slack-team-attributes :slack_teams/atlassian_tenant_id])
           confluence-tenant-attributes (sql/get-by-id db-connection :atlassian_tenants atlassian_tenant_id)
           db-io-result (db-fn system job)
-          job (merge job (select-keys db-io-result [:jobs/id]))]
+          ;; NOTE: SQLite returns :last_insert_rowid() as the key, which is invalid clj, so get the value directly
+          job (merge job {:jobs/id (first (vals db-io-result))})]
 
       (mulog/log ::start-job-db-io
                  ;; FIXME: get the name of the function used as a string
@@ -166,4 +168,3 @@
                    :local-time (java.time.LocalDateTime/now))
         (let [{:keys [channel_id user_id]} (-> request :parameters :form :payload :view :private_metadata read-string)]
           (core-utils/ephemeral-error-message! user_id channel_id (:slack-connection request)))))))
-

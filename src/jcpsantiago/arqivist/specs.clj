@@ -13,13 +13,13 @@
 (spec/def :jobs/frequency #{"once" "daily" "weekly"})
 (spec/def :jobs/target #{"confluence"})
 (spec/def :jobs/target_url string?)
-(spec/def :jobs/last_slack_conversation_datetime inst?)
+(spec/def :jobs/last_slack_conversation_datetime int?)
 (spec/def :jobs/last_slack_conversation_ts string?)
 ;; NOTE: `once` jobs won't have a due date
-(spec/def :jobs/due_date (spec/nilable inst?))
+(spec/def :jobs/due_date (spec/nilable int?))
 (spec/def :jobs/n_runs int?)
-(spec/def :jobs/updated_at inst?)
-(spec/def :jobs/created_at inst?)
+(spec/def :jobs/updated_at (spec/nilable int?))
+(spec/def :jobs/created_at int?)
 
 (spec/def ::job
   (spec/keys
@@ -27,4 +27,3 @@
          :jobs/frequency :jobs/target]
    :opt [:jobs/id :jobs/last_slack_conversation_ts :jobs/due_date :jobs/n_runs :jobs/updated_at :jobs/created_at
          :jobs/target_url :jobs/last_slack_conversation_datetime]))
-
