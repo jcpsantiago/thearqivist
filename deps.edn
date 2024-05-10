@@ -31,7 +31,7 @@
   metosin/jsonista {:mvn/version "0.3.8"}
 
   ;; Slack
-  io.github.jcpsantiago/clj-slack {:git/sha "da7432c" :git/tag "v0.8.2"}
+  io.github.jcpsantiago/clj-slack {:git/sha "18a195b63a67af2286691f9054b61c347a847b86" :git/tag "0.9.0"}
   ;; not using this until they merge the PR updating the OAuth method
   ;; org.julienxx/clj-slack {:mvn/version "0.8.0"}
 
