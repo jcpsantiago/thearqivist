@@ -13,13 +13,8 @@
   Uses the timezone present in the job object.
   "
   [message job]
-  (let [formatter (java.time.format.DateTimeFormatter/ofPattern "yyyy-MM-dd HH:mm:ss")
-
-        datetime (-> (:ts message)
-                     (string/replace #"\..+" "")
-                     (utils/ts->datetime (:jobs/timezone job))
-                     (.format formatter))]
-    (assoc message :datetime datetime)))
+  (->> (utils/slack-ts->datetime (:ts message) (:jobs/timezone job))
+       (assoc message :datetime)))
 
 (defn parse-html-entities
   "

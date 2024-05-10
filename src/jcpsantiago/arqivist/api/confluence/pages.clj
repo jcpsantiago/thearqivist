@@ -31,11 +31,21 @@
 
 ;; Parent page -------------------------------------------------------------
 (defn parent-page
-  []
+  "
+  Creates an HTML string for the parent page. This page aggregates links to all the children
+  pages containing the individual archives for a specific channel.
+  Takes a job as input
+  "
+  [{:keys [channel-name]}]
   (str
    (html
     (list
      (warning-header)
+     [:p
+      (str "This page aggregates all the archives for " channel-name ".")
+      "Follow the links below for quick access to a specific archive."]
+
+     [:p "The links have the format" [:code "<timestamp of the earliest message> — <timestamp of the latest message>"] "."]
      ;; Children display macro, updates a table of contents automatically as we add more child pages
      ;; see docs in https://confluence.atlassian.com/conf59/children-display-macro-792499081.html
      [:ac:structured-macro
@@ -157,55 +167,66 @@
         [:span {:style "color: rgb(151,160,175);"} "The End"]])))))
 
 (defn create-content-body
-  [{:keys [channel-name]} page-html]
-  {:type "page"
-   :title channel-name
-   ;; FIXME: should the space key be part of the job object?
-   ;; it must be in sync with whatever we set in the create-space! fn at onboarding
-   ;; meaning it's a critical assumption that can go wrong if we change things
-   :space {:key "SLCKARQVST"}
-   :body {:storage {:value page-html :representation "storage"}}
-   :metadata
-   {:properties
-    ;; NOTE: if the properties below are not explicitly set,
-    ;; confluence creates a full-width page which looks ugly
-    {:editor
-     {:key "editor"
-      ;; NOTE: the :version :number is how confluence keeps track of changes
-      ;; the :value is for human consumption. This never changes though, thus hardcoded.
-      :version {:number 1}
-      :value "v2"}
-     :content-appearance-draft
-     {:key "content-appearance-draft"
-      :version {:number 1}
-      :value "default"}
-     :content-appearance-published
-     {:key "content-appearance-published"
-      :version {:number 1}
-      :value "default"}}}
-   ;; FIXME: version must be different on each update.
-   ;; should we use a unix timestamp to simplify?
-   :version {:number 1}})
+  [_job parent-id {:keys [title metadata-kvm]} page-html]
+  (merge
+   {:type "page"
+    :title title
+    ;; FIXME: should the space key be part of the job object?
+    ;; it must be in sync with whatever we set in the create-space! fn at onboarding
+    ;; meaning it's a critical assumption that can go wrong if we change things
+    :space {:key "SLCKARQVST"}
+    :body {:storage {:value page-html :representation "storage"}}
+    :metadata
+    {:properties
+     ;; NOTE: if the properties below are not explicitly set,
+     ;; confluence creates a full-width page which looks ugly
+     {:editor
+      {:key "editor"
+       ;; NOTE: the :version :number is how confluence keeps track of changes
+       ;; the :value is for human consumption. This never changes though, thus hardcoded.
+       :version {:number 1}
+       :value "v2"}
+      :content-appearance-draft
+      {:key "content-appearance-draft"
+       :version {:number 1}
+       :value "default"}
+      :content-appearance-published
+      {:key "content-appearance-published"
+       :version {:number 1}
+       :value "default"}
+      :slack_arqivist_props
+      {:key "slack_arqivist_props"
+       :version {:number 1}
+       :value metadata-kvm}}}
+    ;; FIXME: version must be different on each update.
+    ;; should we use a unix timestamp to simplify?
+    :version {:number 1}}
+   (when parent-id {:ancestors [{:id parent-id}]})))
 
 (defn create-content!
-  [job credentials page-html]
+  "
+  Creates a page in Confluence.
+  [:title :parent-id :metadata]
+  "
+  [credentials content-body]
   (let [{:keys [atlassian_tenants/key
                 atlassian_tenants/shared_secret
                 atlassian_tenants/base_url]} credentials
         canonical-url "/rest/api/content"
         jwt-token (utils/atlassian-jwt key shared_secret "POST" canonical-url)
-        body (create-content-body job page-html)
         res @(http/post
               (str base_url canonical-url)
               (utils/opts-with-jwt
                jwt-token
-               {:body (json/write-value-as-string body)}))]
+               {:body (json/write-value-as-string content-body)}))]
     (if (= 200 (:status res))
-      (let [page-uri (-> res :body (json/read-value json/keyword-keys-object-mapper) :_links :webui)]
+      (let [parsed-body (-> res :body (json/read-value json/keyword-keys-object-mapper))
+            page-uri (-> parsed-body :_links :webui)
+            page-id (:id parsed-body)]
         (mulog/log ::create-confluence-page
                    :success :true
                    :local-time (java.time.LocalDateTime/now))
-        {:archive-url (str base_url page-uri)})
+        {:page-id page-id :archive-url (str base_url page-uri)})
       (do
         (mulog/log ::create-confluence-page
                    :success :false

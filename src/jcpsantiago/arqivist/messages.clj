@@ -5,6 +5,7 @@
   "
   (:require
    [clojure.string :as string]
+   [clojure.spec.alpha :as spec]
    [com.brunobonacci.mulog :as mulog]
    [clj-slack.chat :as slack-chat]
    [clj-slack.conversations :as slack-convo]
@@ -13,6 +14,8 @@
    [jcpsantiago.arqivist.utils :as core-utils]
    [jcpsantiago.arqivist.api.slack.utils :as slack-utils]
    [jcpsantiago.arqivist.api.confluence.pages :as confluence-pages]
+   [jcpsantiago.arqivist.api.confluence.utils :as confluence-utils]
+   [jcpsantiago.arqivist.api.confluence.specs :as confluence-specs]
    [next.jdbc.sql :as sql]
    [next.jdbc.date-time]))
 
@@ -22,19 +25,89 @@
   The `job` hash-map contains information about the :target, which
   is used to select which method to use.
   "
-  (fn [job _ _ _] (:jobs/target job)))
+  (fn [job _ _ _ _] (:jobs/target job)))
+
+(defn parse-messages-and-create-page
+  "
+  Function orchestrating the creation of Confluence pages.
+  "
+  [job messages parent-id slack-connection confluence-credentials]
+  (let [int-timestamps (map #(-> (:ts %)
+                                 (string/replace #"\..+" "")
+                                 (parse-long))
+                            messages)
+        first-timestamp (apply min int-timestamps)
+        latest-timestamp (apply max int-timestamps)]
+    (mulog/log ::parse-and-create
+               :job job
+               :messages messages
+               :first-ts first-timestamp
+               :latest-ts latest-timestamp
+               :parent-id parent-id)
+    (let [;; NOTE: Title renders as "YYYY-MM-DD HH:MM — YYYY-MM-DD HH:MM"
+          timezone (:jobs/timezone job)
+          title (str
+                 (core-utils/ts->datetime first-timestamp timezone)
+                 "—"
+                 (core-utils/ts->datetime latest-timestamp timezone))
+          page-rows (->> messages
+                         (pmap #(parsers/parse-message job slack-connection %))
+                         (sort-by :ts #(compare %2 %1))
+                         (map confluence-pages/page-row))
+          metadata-kvm {:arqivist_slack_thread_last_message_ts latest-timestamp
+                        :arqivist_slack_channel_id (:jobs/slack_channel_id job)}
+          page-attributes {:metadata-kvm metadata-kvm
+                           :title title}]
+      (->> page-rows
+           (confluence-pages/archival-page job)
+           (confluence-pages/create-content-body job parent-id page-attributes)
+           (confluence-pages/create-content! confluence-credentials)))))
 
 (defmethod archive! "confluence"
-  [job slack-connection confluence-credentials messages]
-  ;; TODO: Check if parent page already exists, else create it
-  ;; Save new messages as child pages where title is <min date> — <max date>
-  (let [page-rows (->> messages
-                       (pmap #(parsers/parse-message job slack-connection %))
-                       (sort-by :ts #(compare %2 %1))
-                       (map confluence-pages/page-row))]
-    (->> page-rows
-         (confluence-pages/archival-page job)
-         (confluence-pages/create-content! job confluence-credentials))))
+  [job system slack-connection confluence-credentials messages]
+  (mulog/log ::archive!
+             :job job)
+  (try
+    (let [{:keys [:atlassian_tenants/base_url :atlassian_tenants/shared_secret]} confluence-credentials
+          {:keys [:jobs/slack_channel_id]} job
+          atlassian-env (:atlassian-env system)
+          cql-response (confluence-utils/search-with-cql!
+                        base_url shared_secret (:descriptor-key atlassian-env) "arqivist_parent_slack_channel_id" (str "parent_" slack_channel_id))
+          [response-type response] (spec/conform ::confluence-specs/cql-search cql-response)
+          [results-type results] (:results response)]
+      (cond
+        (and (= :good response-type) (= :empty results-type))
+        ;; TODO: make the metadata literal into fn and reuse it where necessary
+        (let [metadata-kvm {:arqivist_parent_slack_channel_id (str "parent_" slack_channel_id)}
+              page-attributes {:metadata-kvm metadata-kvm
+                               :title (str "# " (:channel-name job))}
+              {:keys [page-id]}
+              (->> job
+                   (confluence-pages/parent-page)
+                   (confluence-pages/create-content-body job nil page-attributes)
+                   (confluence-pages/create-content! confluence-credentials))]
+          ;; TODO: add log
+          ;; TODO: send ephemeral in case the parent already exists, but has no children
+          (parse-messages-and-create-page job messages page-id slack-connection confluence-credentials))
+
+        (and (= :good response-type) (= :populated results-type))
+        (let [parent-id (get-in (first results) [:content :id])]
+         ;; TODO: add log
+          (parse-messages-and-create-page
+           job messages parent-id slack-connection confluence-credentials))
+
+        (= :error response-type)
+        (do
+          (mulog/log ::archive-confluence
+                     :success :false
+                     :message "Failed to search Confluence with CQL"
+                     :error (:message response))
+          response)))
+    (catch Exception e
+      (mulog/log ::archive-confluence
+                 :success :false
+                 :error (.getMessage e)
+                 :exception e))))
 
 (defn due-date
   "
@@ -74,13 +147,16 @@
     (if (seq channel-name)
       ;; TODO: create a spec for a uniform response format for archive!
       (let [archival-response (-> (assoc job :channel-name channel-name)
-                                  (archive! slack-connection target-credentials messages))]
+                                  (archive! system slack-connection target-credentials messages))]
         (if (contains? archival-response :archive-url)
           (do
             (let [frequency (:jobs/frequency job)
-                  last-ts (->> messages (sort-by :ts) last :ts)
-                  last-datetime (-> last-ts
+                  latest-ts (->> messages (sort-by :ts) last :ts)
+                  latest-unixts (-> latest-ts
                                     (string/replace #"\..+" "")
+                                    (parse-long))
+                  latest-datetime (-> latest-unixts
+                                      (java.time.Instant/ofEpochSecond))
                                     (Long/parseLong))
                   n-runs (if (nil? (:jobs/n_runs job))
                            1
@@ -88,7 +164,7 @@
                   job-due-date (due-date frequency)
                   updates {:jobs/target_url (:archive-url archival-response)
                            :jobs/frequency frequency
-                           ;; FIXME: n_runs can't be null, inc explodes, check beforehand
+                           ;; NOTE: n_runs can't be null, inc explodes, check beforehand
                            :jobs/n_runs n-runs
                            :jobs/last_slack_conversation_ts last-ts
                            :jobs/last_slack_conversation_datetime last-datetime
@@ -116,6 +192,7 @@
                (str "<@" owner_slack_user_id "> requested the archival of this channel.\n"
                     "Find it in " (:archive-url archival-response)))))
 
+          ;; Something went wrong, no :archive-url present
           (do
             (mulog/log ::scribe-archive
                        :success :false
