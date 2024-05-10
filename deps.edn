@@ -3,7 +3,7 @@
 
  :deps
  {;; Application
-  org.clojure/clojure {:mvn/version "1.11.1"}
+  org.clojure/clojure {:mvn/version "1.11.3"}
 
   ;; System
   party.donut/system {:mvn/version "0.0.241"}
