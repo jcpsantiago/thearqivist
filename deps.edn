@@ -24,7 +24,7 @@
   org.xerial/sqlite-jdbc {:mvn/version "3.45.3.0"}
 
   ;; HTTP server
-  http-kit/http-kit {:mvn/version "2.7.0"}
+  http-kit/http-kit {:mvn/version "2.8.0"}
   camel-snake-kebab/camel-snake-kebab {:mvn/version "0.4.3"}
   metosin/muuntaja {:mvn/version "0.6.8"}
   metosin/reitit {:mvn/version "0.6.0"}
