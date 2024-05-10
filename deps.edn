@@ -26,7 +26,7 @@
   ;; HTTP server
   http-kit/http-kit {:mvn/version "2.7.0"}
   camel-snake-kebab/camel-snake-kebab {:mvn/version "0.4.3"}
-  metosin/muuntaja {:mvn/version "0.6.8"}
+  metosin/muuntaja {:mvn/version "0.6.10"}
   metosin/reitit {:mvn/version "0.6.0"}
   metosin/jsonista {:mvn/version "0.3.8"}
 
