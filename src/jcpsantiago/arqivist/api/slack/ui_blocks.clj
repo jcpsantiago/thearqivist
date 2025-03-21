@@ -139,9 +139,9 @@
      [["*Owner*: " (str "<@" owner_slack_user_id ">")]
       ["*Created at*: " (slack-nice-datetime created_at "{date_num}" created_at)]
       ["*Frequency*:" (str "`" frequency "`")]
-      ["*Next archival at*:" (if due_date_tz
-                               (slack-nice-datetime due_date "{date_num}" due_date_tz)
-                               "Not scheduled")]
+      ["*Next archival at*:" (if (= frequency "once")
+                               "Not scheduled"
+                               (slack-nice-datetime due_date "{date_num}" due_date_tz))]
       ["*Archived until*:" (slack-nice-datetime last_slack_conversation_datetime "{date_num} {time}" last_slack_conversation_tz)]])))
 
 (defn exists-once-modal

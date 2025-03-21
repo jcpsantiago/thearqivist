@@ -19,18 +19,10 @@
   Fetches messages from a channel or message thread, iterating over
   the response in case it is paginated.
   "
-  ([slack-connection channel-id]
+  ([slack-connection channel-id oldest-ts]
    (iteration
     (fn [k]
-      (slack-convo/history slack-connection channel-id {:cursor k}))
-    :kf (fn [res] (get-in res [:response_metadata :next_cursor]))
-    :vf :messages
-    :initk ""
-    :somef :messages))
-  ([slack-connection channel-id thread-ts]
-   (iteration
-    (fn [k]
-      (slack-convo/replies slack-connection channel-id thread-ts {:cursor k}))
+      (slack-convo/history slack-connection channel-id {:cursor k :oldest oldest-ts}))
     :kf (fn [res] (get-in res [:response_metadata :next_cursor]))
     :vf :messages
     :initk ""
@@ -43,10 +35,17 @@
   "
   [message slack-connection channel-id]
   (if (contains? message :thread_ts)
-    (assoc message :replies (->> (fetch-messages slack-connection channel-id (:thread_ts message))
-                                 (sequence cat)
-                                 ;; NOTE: the first message is the thread initiator
-                                 rest))
+    (let [replies (iteration
+                   (fn [k]
+                     (slack-convo/replies slack-connection channel-id (:thread_ts message) {:cursor k}))
+                   :kf (fn [res] (get-in res [:response_metadata :next_cursor]))
+                   :vf :messages
+                   :initk ""
+                   :somef :messages)]
+      (assoc message :replies (->> replies
+                                   (sequence cat)
+                                   ;; NOTE: the first message is the thread initiator
+                                   rest)))
     message))
 
 (defn fetch-conversation-history
@@ -54,9 +53,9 @@
   Fetches messages from a Slack conversation, including replies in threads.
   Returns a list of Slack conversations
   "
-  [slack-connection channel-id]
+  [slack-connection channel-id oldest-ts]
   (try
-    (let [messages (->> (fetch-messages slack-connection channel-id)
+    (let [messages (->> (fetch-messages slack-connection channel-id oldest-ts)
                         ;; FIXME: we are looping twice over all messages
                         ;; Once to fetch all messages, then again to fetch all replies.
                         ;; Find a way to avoid a second map over _all_ messages

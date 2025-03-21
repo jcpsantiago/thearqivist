@@ -40,7 +40,7 @@
     (let [context (mulog/local-context)]
       (future
         (mulog/with-context context
-                            (messages/start-job system request job core-utils/persist-job!)))
+          (messages/start-job system request job core-utils/persist-job!)))
 
       (update-modal-response ui/confirm-job-started-modal request))
 
@@ -53,17 +53,21 @@
       (response (core-utils/error-response-text)))))
 
 (defn exists-once-confirmation-handler
-  [system request job]
+  [system request]
   (try
-    (let [existing-job (-> request
-                           (get-in [:parameters :form :payload :view :private_metadata])
+    (let [view (get-in request [:parameters :form :payload :view])
+          frequency (get-in view [:state :values :archive_frequency_selector
+                                  :radio_buttons-action :selected_option :value])
+          existing-job (-> view
+                           :private_metadata
                            edn/read-string
                            :existing-job)
-          updated-job (assoc existing-job :jobs/frequency (:jobs/frequency job))]
+          updated-job (assoc existing-job :jobs/frequency frequency)]
 
+      ;; TODO: conform updated-job to spec
       (future
         (mulog/with-context (mulog/local-context)
-                            (messages/start-job system request updated-job core-utils/update-job!)))
+          (messages/start-job system request updated-job core-utils/update-job!)))
 
       ;; job started confirmation modal
       (update-modal-response ui/confirm-job-started-modal request))
@@ -88,7 +92,7 @@
     (case callback-id
       "new-archive-confirmation" (setup-archival-handler system request job)
       ;; NOTE: the existing-job is passed via the private metadata, thus no further db i/o needed
-      "exists-once-confirmation" (exists-once-confirmation-handler system request job))))
+      "exists-once-confirmation" (exists-once-confirmation-handler system request))))
 
 (defn interaction-handler
   "
@@ -104,12 +108,12 @@
 
       (mulog/with-context
        context
-       (mulog/log ::interaction-payload
-                  :local-time (java.time.LocalDateTime/now))
-       (case type
-         "view_submission" (view-submission system request)
-         "message_action" "TODO"
-         (bad-request "Unknown type"))))))
+        (mulog/log ::interaction-payload
+                   :local-time (java.time.LocalDateTime/now))
+        (case type
+          "view_submission" (view-submission system request)
+          "message_action" "TODO"
+          (bad-request "Unknown type"))))))
 
 ;;
 ;; ------------------------------------------------------

@@ -3,6 +3,7 @@
   (:require
    [clj-slack.chat :as slack-chat]
    [clj-slack.users :as slack-users]
+   [clojure.string :as string]
    [clojure.spec.alpha :as spec]
    [com.brunobonacci.mulog :as mulog]
    [java-time.api :as java-time]
@@ -12,11 +13,20 @@
 (defn ts->datetime
   "Convert a UNIX timestamp into a java instant."
   [ts tz]
-  (let [epoch-seconds (Long/parseLong ts)
+  (let [formatter (java.time.format.DateTimeFormatter/ofPattern "yyyy-MM-dd HH:mm:ss")
         zone (java.time.ZoneId/of tz)]
-    (-> epoch-seconds
+    (-> ts
         java.time.Instant/ofEpochSecond
-        (.atZone zone))))
+        (.atZone zone)
+        (.format formatter))))
+
+(defn slack-ts->datetime
+  [ts tz]
+  (let [datetime (-> ts
+                     (string/replace #"\..+" "")
+                     (parse-long)
+                     (ts->datetime tz))]
+    datetime))
 
 (defn unix-epoch
   []
@@ -56,7 +66,7 @@
 
 (defn request->job
   "
-  Helper fn to create a `job` from a ring request originating in the `/interactivity` endpoint.
+  Helper fn to create a new `job` from a ring request originating in the `/interactivity` endpoint.
   Throws an exception if `job` has an invalid spec.
   "
   [request]
@@ -68,9 +78,12 @@
         {:keys [channel_id user_id]} (-> view :private_metadata read-string)
         frequency (get-in view [:state :values :archive_frequency_selector
                                 :radio_buttons-action :selected_option :value])
+        now (quot (System/currentTimeMillis) 1000)
         job-map {:jobs/target "confluence" :jobs/frequency frequency
                  :jobs/slack_team_id slack-team-id :jobs/slack_channel_id channel_id
-                 :jobs/owner_slack_user_id user_id :jobs/timezone tz :jobs/created_at (quot (System/currentTimeMillis) 1000)}
+                 :jobs/owner_slack_user_id user_id :jobs/timezone tz
+                 :jobs/created_at now :jobs/updated_at now
+                 :jobs/n_runs 0 :jobs/due_date now}
         job (spec/conform ::core-specs/job job-map)]
 
     (if (spec/invalid? job)
@@ -118,14 +131,16 @@
   "
   [system job]
   (try
-    (sql/update! (:db-connection system)
-                 :jobs
-                 job
-                 {:id (:jobs/id job)})
+    (let [res (sql/update! (:db-connection system)
+                           :jobs
+                           job
+                           {:id (:jobs/id job)})]
 
-    (mulog/log ::update-job-in-db
-               :success :true
-               :local-time (java.time.LocalDateTime/now))
+      (mulog/log ::update-job-in-db
+                 :db-response res
+                 :success :true
+                 :local-time (java.time.LocalDateTime/now))
+      res)
 
     (catch Exception e
       (mulog/log ::update-job-in-db
@@ -134,4 +149,4 @@
                  :error (ex-data e)
                  :error-message (ex-message e)
                  :local-time (java.time.LocalDateTime/now))
-      (throw (ex-info "Failed to insert job in database" e)))))
+      (throw (ex-info "Failed to update job in database" e)))))
