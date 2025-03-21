@@ -57,10 +57,17 @@
           metadata-kvm {:arqivist_slack_thread_last_message_ts latest-timestamp
                         :arqivist_slack_channel_id (:jobs/slack_channel_id job)}
           page-attributes {:metadata-kvm metadata-kvm
-                           :title title}]
+                           :title title}
+          job-owner-user-name (->>
+                               (slack-utils/slack-users-info
+                                slack-connection
+                                (:jobs/owner_slack_user_id job))
+                               :user :real_name)
+          job-with-name (assoc job :owner-name job-owner-user-name)]
+
       (->> page-rows
-           (confluence-pages/archival-page job)
-           (confluence-pages/create-content-body job parent-id page-attributes)
+           (confluence-pages/archival-page job-with-name)
+           (confluence-pages/create-content-body job-with-name parent-id page-attributes)
            (confluence-pages/create-content! confluence-credentials)))))
 
 (defmethod archive! "confluence"
@@ -111,16 +118,19 @@
 
 (defn due-date
   "
-  Takes `frequency` as a string, and returns `java-time/local-date-time`
-  plus one unit of the provided frequency e.g. one week.
-
-  If frequency is `once` returns nil.
+  Takes a unix timestamp to use as reference, and a frequency string.
+  Returns a unix timestamp resulting from adding the frequency to the reference.
+  If frequency is 'once', returns the reference timestamp.
   "
   [frequency]
-  (case frequency
-    "once" nil
-    "daily"  (java-time/+ (java-time/instant) (java-time/days 1))
-    "weekly" (java-time/+ (java-time/instant) (java-time/weeks 1))))
+  (let [due-in (fn [period]
+                 (-> (java-time/instant)
+                     (java-time/+ period)
+                     (.getEpochSecond)))]
+    (case frequency
+      "once" (due-in (java-time/days 0))
+      "daily" (due-in (java-time/days 1))
+      "weekly" (due-in (java-time/weeks 1)))))
 
 ;; TODO:
 ;; * clean up in case it's a first-time run and creating the archive fails
@@ -135,16 +145,28 @@
              :slack-connection slack-connection
              :job job
              :target-credentials target-credentials)
-  (let [{:keys [:jobs/slack_channel_id :jobs/owner_slack_user_id]} job
+  (let [{:keys [:jobs/slack_channel_id :jobs/owner_slack_user_id :jobs/last_slack_conversation_ts]} job
         channel-info-response (slack-convo/info slack-connection slack_channel_id)
         channel-name (get-in channel-info-response [:channel :name])
-        messages (slack-utils/fetch-conversation-history slack-connection slack_channel_id)]
+        messages (slack-utils/fetch-conversation-history slack-connection slack_channel_id last_slack_conversation_ts)]
     (mulog/log ::the-scribe-post-1
                :messages messages
                :channel-info channel-info-response)
 
     ;; TODO: check if messages is alright
-    (if (seq channel-name)
+    (cond
+      (and inform? (seq messages) (seq channel-name))
+      (do
+        (mulog/log ::scribe-archive
+                   :success :false
+                   :message "Could not retrieve channel name"
+                   :slack-error (:error channel-info-response)
+                   :local-time (java.time.LocalDateTime/now))
+        (slack-chat/post-ephemeral slack-connection
+                                   slack_channel_id
+                                   "I did not find any new messages since the last time I archived this channel."
+                                   {:user owner_slack_user_id}))
+      (seq channel-name)
       ;; TODO: create a spec for a uniform response format for archive!
       (let [archival-response (-> (assoc job :channel-name channel-name)
                                   (archive! system slack-connection target-credentials messages))]
@@ -155,21 +177,14 @@
                   latest-unixts (-> latest-ts
                                     (string/replace #"\..+" "")
                                     (parse-long))
-                  latest-datetime (-> latest-unixts
-                                      (java.time.Instant/ofEpochSecond))
-                                    (Long/parseLong))
-                  n-runs (if (nil? (:jobs/n_runs job))
-                           1
-                           (inc (:jobs/n_runs job)))
                   job-due-date (due-date frequency)
                   updates {:jobs/target_url (:archive-url archival-response)
                            :jobs/frequency frequency
-                           ;; NOTE: n_runs can't be null, inc explodes, check beforehand
-                           :jobs/n_runs n-runs
-                           :jobs/last_slack_conversation_ts last-ts
-                           :jobs/last_slack_conversation_datetime last-datetime
-                           :jobs/due_date (when job-due-date
-                                            (.getEpochSecond job-due-date))
+                           ;; FIXME: n_runs can't be null, inc explodes, check beforehand
+                           :jobs/n_runs (inc (:jobs/n_runs job))
+                           :jobs/last_slack_conversation_ts latest-ts
+                           :jobs/last_slack_conversation_datetime latest-unixts
+                           :jobs/due_date job-due-date
                            :jobs/updated_at (core-utils/unix-epoch)}]
 
               (sql/update!
@@ -198,6 +213,7 @@
                        :success :false
                        :local-time (java.time.LocalDateTime/now))
             (core-utils/ephemeral-error-message! owner_slack_user_id slack_channel_id slack-connection))))
+      :else
       (do
         (mulog/log ::scribe-archive
                    :success :false
@@ -219,12 +235,17 @@
           atlassian_tenant_id (get-in request [:slack-team-attributes :slack_teams/atlassian_tenant_id])
           confluence-tenant-attributes (sql/get-by-id db-connection :atlassian_tenants atlassian_tenant_id)
           db-io-result (db-fn system job)
-          ;; NOTE: SQLite returns :last_insert_rowid() as the key, which is invalid clj, so get the value directly
-          job (merge job {:jobs/id (first (vals db-io-result))})]
+          job-id (:jobs/id job)
+          job (if job-id
+                job
+                ;; NOTE: SQLite returns :last_insert_rowid() as the key,
+                ;; which is invalid clj, so get the value directly
+                (assoc job :jobs/id (first (vals db-io-result))))]
 
       (mulog/log ::start-job-db-io
-                 ;; FIXME: get the name of the function used as a string
-                 :db-fn db-fn
+                 ;; NOTE: from https://stackoverflow.com/questions/11911027/how-can-i-get-the-name-of-a-function-from-a-symbol-in-clojure
+                 :db-fn (->> (str db-fn)
+                             (re-find #"(?<=\$).*(?=@)"))
                  :job job
                  :db-io-result db-io-result
                  :success :true

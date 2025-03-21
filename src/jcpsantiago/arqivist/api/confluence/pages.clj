@@ -6,6 +6,7 @@
    [hiccup.element :refer [image link-to]]
    [hiccup.page :refer [html5 include-js include-css]]
    [jcpsantiago.arqivist.api.confluence.utils :as utils]
+   [java-time.api :as java-time]
    [jsonista.core :as json]
    [org.httpkit.client :as http]))
 
@@ -139,8 +140,11 @@
   Takes a seq of page-rows (see page-row fn) and returns an HTML string.
   "
   [job page-rows]
-  (let [{:keys [user-name timezone domain channel-id]} job
-        channel-url (str "https://" domain ".slack.com/archives/" channel-id)]
+  (let [{:keys [:owner-name :jobs/timezone :jobs/slack_channel_id :jobs/created_at]} job
+        channel-url (str "slack://channel?" "T036J39LN48"  "&"  slack_channel_id)
+        human-created-at (java-time/local-date-time
+                          (java-time/instant (* 1000 created_at))
+                          timezone)]
     (str
      (html
       (list
@@ -149,12 +153,12 @@
        ;; Start of page ------------------------------------------------------------------------------
        [:p (str "All conversation timestamps are in " timezone " timezone.")]
        [:p
-        [:strong "Original Slack 💬 in"]
+        [:strong "Original Slack 💬: " channel-url]
         (card-link channel-url)]
        ;; keeping this in case we decide to use a normal redirect instead
        ;; (card-link (str "https://slack.com/app_redirect?channel=" channel-id))]
        [:p
-        (str user-name " requested the archival of this thread on ")]
+        (str owner-name " requested the archival of this thread on " human-created-at)]
 
        ;; Start of messages --------------------------------------------------------------------------
        [:h1  "💬 Messages"]

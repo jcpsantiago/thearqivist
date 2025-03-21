@@ -24,6 +24,6 @@
 (spec/def ::job
   (spec/keys
    :req [:jobs/slack_team_id :jobs/slack_channel_id :jobs/owner_slack_user_id :jobs/timezone
-         :jobs/frequency :jobs/target]
-   :opt [:jobs/id :jobs/last_slack_conversation_ts :jobs/due_date :jobs/n_runs :jobs/updated_at :jobs/created_at
+         :jobs/frequency :jobs/target :jobs/n_runs :jobs/updated_at :jobs/created_at]
+   :opt [:jobs/id :jobs/last_slack_conversation_ts :jobs/due_date
          :jobs/target_url :jobs/last_slack_conversation_datetime]))
